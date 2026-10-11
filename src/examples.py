@@ -1,6 +1,9 @@
 import json
 ex = []
-def add(t, code, stdin=""): ex.append({"title": t, "code": code.strip("\n") + "\n", "stdin": stdin})
+def add(t, code, stdin="", files=None):
+    e = {"title": t, "code": code.strip("\n") + "\n", "stdin": stdin}
+    if files: e["files"] = {k: v.strip("\n") + "\n" for k, v in files.items()}
+    ex.append(e)
 add("Hello World", r'''
 #include <stdio.h>
 
@@ -262,5 +265,204 @@ int main(void) {
     return 0;
 }
 ''')
+add("goto 统一清理", r"""
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+/* 经典写法：出错时用 goto 跳到统一的清理代码，按相反顺序释放资源 */
+int process(int n, int fail_at) {
+    int ret = -1;
+    int *nums = NULL;
+    char *buf = NULL;
+
+    nums = malloc(n * sizeof(int));
+    if (nums == NULL || fail_at == 1) {
+        printf("  第 1 步失败\n");
+        goto cleanup_nums;
+    }
+    for (int i = 0; i < n; i++) nums[i] = i * i;
+
+    buf = malloc(64);
+    if (buf == NULL || fail_at == 2) {
+        printf("  第 2 步失败\n");
+        goto cleanup_buf;
+    }
+    int sum = 0;
+    for (int i = 0; i < n; i++) sum += nums[i];
+    sprintf(buf, "平方和 = %d", sum);
+    printf("  成功：%s\n", buf);
+    ret = 0;
+
+cleanup_buf:
+    free(buf);
+cleanup_nums:
+    free(nums);
+    printf("  已释放资源，返回 %d\n", ret);
+    return ret;
+}
+
+int main(void) {
+    for (int f = 0; f <= 2; f++) {
+        printf("fail_at = %d:\n", f);
+        process(5, f);
+    }
+
+    /* goto 也能一次跳出多层循环 */
+    int i, j;
+    for (i = 1; i <= 9; i++)
+        for (j = 1; j <= 9; j++)
+            if (i * j == 42) goto found;
+    printf("没有找到\n");
+    return 0;
+found:
+    printf("找到 %d x %d = 42\n", i, j);
+    return 0;
+}
+""")
+add("位域结构体", r"""
+#include <stdio.h>
+
+/* 用位域把多个小字段压缩进一个 16 位整数 */
+struct Date {
+    unsigned short day   : 5;   /* 1..31 */
+    unsigned short month : 4;   /* 1..12 */
+    unsigned short year  : 7;   /* 2000 年起的偏移 0..127 */
+};
+
+struct Flags {
+    unsigned char readable   : 1;
+    unsigned char writable   : 1;
+    unsigned char executable : 1;
+    signed   char level      : 3;  /* 有符号：-4..3 */
+};
+
+int main(void) {
+    struct Date d = { .day = 12, .month = 10, .year = 26 };
+    printf("日期：%u-%02u-%02u\n", 2000 + d.year, d.month, d.day);
+    printf("sizeof(struct Date)  = %zu 字节\n", sizeof(struct Date));
+
+    unsigned short raw = *(unsigned short *)&d;
+    printf("内存中的位模式：0x%04x\n", raw);
+
+    struct Flags f = {1, 0, 1, -2};
+    printf("rwx = %d%d%d, level = %d\n", f.readable, f.writable, f.executable, f.level);
+    f.level = 3;
+    f.level++;          /* 3 位有符号数溢出：3 + 1 -> -4 */
+    printf("level 加一后 = %d\n", f.level);
+    d.day = 40;         /* 只保留低 5 位：40 -> 8 */
+    printf("day 写入 40 后 = %u\n", d.day);
+    printf("sizeof(struct Flags) = %zu 字节\n", sizeof(struct Flags));
+    return 0;
+}
+""")
+add("变长数组矩阵", r"""
+#include <stdio.h>
+
+/* C99 变长数组（VLA）：数组大小在运行时决定，也可以作为函数参数 */
+void fill(int r, int c, int m[r][c]) {
+    for (int i = 0; i < r; i++)
+        for (int j = 0; j < c; j++)
+            m[i][j] = (i + 1) * (j + 1);
+}
+
+void multiply(int n, int k, int m, int a[n][k], int b[k][m], int out[n][m]) {
+    for (int i = 0; i < n; i++)
+        for (int j = 0; j < m; j++) {
+            out[i][j] = 0;
+            for (int t = 0; t < k; t++) out[i][j] += a[i][t] * b[t][j];
+        }
+}
+
+void print(int r, int c, int m[r][c]) {
+    for (int i = 0; i < r; i++) {
+        for (int j = 0; j < c; j++) printf("%5d", m[i][j]);
+        printf("\n");
+    }
+}
+
+int main(void) {
+    int n, k, m;
+    scanf("%d %d %d", &n, &k, &m);
+    int a[n][k], b[k][m], c[n][m];
+    fill(n, k, a);
+    fill(k, m, b);
+    multiply(n, k, m, a, b, c);
+    printf("A (%d x %d):\n", n, k); print(n, k, a);
+    printf("B (%d x %d):\n", k, m); print(k, m, b);
+    printf("A x B:\n");             print(n, m, c);
+    printf("sizeof(c) = %zu 字节, 每行 %zu 字节\n", sizeof(c), sizeof(c[0]));
+    return 0;
+}
+""", "2 3 4\n")
+add("多文件：头文件与模块", r"""
+#include <stdio.h>
+#include "stack.h"
+
+/* 多文件示例：点上方的 stack.h / stack.c 标签查看另外两个文件 */
+int main(void) {
+    Stack s;
+    stack_init(&s);
+    for (int i = 1; i <= 5; i++) stack_push(&s, i * i);
+    printf("栈里有 %d 个元素，栈顶是 %d\n", stack_size(&s), stack_peek(&s));
+    while (!stack_empty(&s)) printf("%d ", stack_pop(&s));
+    printf("\n累计 push 次数：%d\n", push_count);
+    return 0;
+}
+""", files={"stack.h": r"""
+#ifndef STACK_H
+#define STACK_H
+
+#include <stdbool.h>
+
+#define STACK_CAP 16
+
+typedef struct {
+    int data[STACK_CAP];
+    int top;
+} Stack;
+
+extern int push_count;   /* 定义在 stack.c 中 */
+
+void stack_init(Stack *s);
+void stack_push(Stack *s, int v);
+int  stack_pop(Stack *s);
+int  stack_peek(const Stack *s);
+int  stack_size(const Stack *s);
+bool stack_empty(const Stack *s);
+
+#endif
+""", "stack.c": r"""
+#include <stdio.h>
+#include <stdlib.h>
+#include "stack.h"
+
+int push_count = 0;
+
+/* static 函数只在本文件内可见 */
+static void check(bool ok, const char *msg) {
+    if (!ok) {
+        fprintf(stderr, "栈错误：%s\n", msg);
+        exit(1);
+    }
+}
+
+void stack_init(Stack *s) { s->top = 0; }
+
+void stack_push(Stack *s, int v) {
+    check(s->top < STACK_CAP, "栈已满");
+    s->data[s->top++] = v;
+    push_count++;
+}
+
+int stack_pop(Stack *s) {
+    check(s->top > 0, "栈为空");
+    return s->data[--s->top];
+}
+
+int stack_peek(const Stack *s) { check(s->top > 0, "栈为空"); return s->data[s->top - 1]; }
+int stack_size(const Stack *s) { return s->top; }
+bool stack_empty(const Stack *s) { return s->top == 0; }
+"""})
 json.dump(ex, open("examples.json", "w"), ensure_ascii=False, indent=1)
 print(len(ex))
