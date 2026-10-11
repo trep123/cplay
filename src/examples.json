@@ -1,0 +1,52 @@
+[
+ {
+  "title": "Hello World",
+  "code": "#include <stdio.h>\n\nint main(void) {\n    printf(\"Hello, World!\\n\");\n    printf(\"你好，C 语言！\\n\");\n    return 0;\n}\n",
+  "stdin": ""
+ },
+ {
+  "title": "斐波那契",
+  "code": "#include <stdio.h>\n\n/* 递归版本 */\nlong long fib(int n) {\n    if (n < 2) return n;\n    return fib(n - 1) + fib(n - 2);\n}\n\nint main(void) {\n    printf(\"递归计算前 20 项：\\n\");\n    for (int i = 0; i < 20; i++) {\n        printf(\"%lld \", fib(i));\n    }\n    printf(\"\\n\\n循环计算第 90 项：\\n\");\n    long long a = 0, b = 1;\n    for (int i = 0; i < 90; i++) {\n        long long t = a + b;\n        a = b;\n        b = t;\n    }\n    printf(\"fib(90) = %lld\\n\", a);\n    return 0;\n}\n",
+  "stdin": ""
+ },
+ {
+  "title": "冒泡排序",
+  "code": "#include <stdio.h>\n\nvoid bubble_sort(int a[], int n) {\n    for (int i = 0; i < n - 1; i++) {\n        int swapped = 0;\n        for (int j = 0; j < n - 1 - i; j++) {\n            if (a[j] > a[j + 1]) {\n                int t = a[j];\n                a[j] = a[j + 1];\n                a[j + 1] = t;\n                swapped = 1;\n            }\n        }\n        if (!swapped) break;\n    }\n}\n\nvoid print_array(const int a[], int n) {\n    for (int i = 0; i < n; i++) printf(\"%d%c\", a[i], i == n - 1 ? '\\n' : ' ');\n}\n\nint main(void) {\n    int nums[] = {64, 34, 25, 12, 22, 11, 90, 5};\n    int n = sizeof(nums) / sizeof(nums[0]);\n    printf(\"排序前: \");\n    print_array(nums, n);\n    bubble_sort(nums, n);\n    printf(\"排序后: \");\n    print_array(nums, n);\n    return 0;\n}\n",
+  "stdin": ""
+ },
+ {
+  "title": "指针与字符串",
+  "code": "#include <stdio.h>\n\nint my_strlen(const char *s) {\n    const char *p = s;\n    while (*p) p++;\n    return (int)(p - s);\n}\n\nvoid reverse(char *s) {\n    char *l = s, *r = s + my_strlen(s) - 1;\n    while (l < r) {\n        char t = *l;\n        *l++ = *r;\n        *r-- = t;\n    }\n}\n\nint main(void) {\n    char str[] = \"Hello, Pointer!\";\n    printf(\"原字符串: %s\\n\", str);\n    printf(\"长度: %d\\n\", my_strlen(str));\n    reverse(str);\n    printf(\"反转后: %s\\n\", str);\n\n    int arr[5] = {10, 20, 30, 40, 50};\n    int *p = arr;\n    printf(\"通过指针遍历数组: \");\n    for (int i = 0; i < 5; i++) printf(\"%d \", *(p + i));\n    printf(\"\\n第三个元素的地址偏移: %ld 字节\\n\", (long)((char *)&arr[2] - (char *)arr));\n    return 0;\n}\n",
+  "stdin": ""
+ },
+ {
+  "title": "结构体与链表",
+  "code": "#include <stdio.h>\n#include <stdlib.h>\n\ntypedef struct Node {\n    int value;\n    struct Node *next;\n} Node;\n\nNode *push_front(Node *head, int v) {\n    Node *n = (Node *)malloc(sizeof(Node));\n    n->value = v;\n    n->next = head;\n    return n;\n}\n\nNode *reverse_list(Node *head) {\n    Node *prev = NULL;\n    while (head) {\n        Node *next = head->next;\n        head->next = prev;\n        prev = head;\n        head = next;\n    }\n    return prev;\n}\n\nvoid print_list(const Node *head) {\n    for (const Node *p = head; p != NULL; p = p->next)\n        printf(\"%d -> \", p->value);\n    printf(\"NULL\\n\");\n}\n\nint main(void) {\n    Node *list = NULL;\n    for (int i = 1; i <= 5; i++) list = push_front(list, i * 10);\n    printf(\"链表:   \");\n    print_list(list);\n    list = reverse_list(list);\n    printf(\"反转后: \");\n    print_list(list);\n\n    int count = 0;\n    while (list) {\n        Node *t = list;\n        list = list->next;\n        free(t);\n        count++;\n    }\n    printf(\"已释放 %d 个节点\\n\", count);\n    return 0;\n}\n",
+  "stdin": ""
+ },
+ {
+  "title": "qsort 与函数指针",
+  "code": "#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n\ntypedef struct {\n    char name[16];\n    int score;\n} Student;\n\nint by_score_desc(const void *a, const void *b) {\n    const Student *x = (const Student *)a, *y = (const Student *)b;\n    return y->score - x->score;\n}\n\nint by_name(const void *a, const void *b) {\n    return strcmp(((const Student *)a)->name, ((const Student *)b)->name);\n}\n\nvoid show(const char *title, Student s[], int n) {\n    printf(\"%s\\n\", title);\n    for (int i = 0; i < n; i++) printf(\"  %-8s %3d\\n\", s[i].name, s[i].score);\n}\n\nint main(void) {\n    Student s[] = {{\"Alice\", 88}, {\"Bob\", 95}, {\"Carol\", 72}, {\"Dave\", 95}, {\"Eve\", 60}};\n    int n = sizeof(s) / sizeof(s[0]);\n    int (*cmp)(const void *, const void *) = by_score_desc;\n    qsort(s, n, sizeof(Student), cmp);\n    show(\"按分数从高到低:\", s, n);\n    qsort(s, n, sizeof(Student), by_name);\n    show(\"按名字排序:\", s, n);\n    return 0;\n}\n",
+  "stdin": ""
+ },
+ {
+  "title": "读取输入",
+  "code": "#include <stdio.h>\n\nint main(void) {\n    int a, b;\n    printf(\"请输入两个整数（在“输入”面板中填写）：\\n\");\n    if (scanf(\"%d %d\", &a, &b) != 2) {\n        printf(\"输入格式错误\\n\");\n        return 1;\n    }\n    printf(\"%d + %d = %d\\n\", a, b, a + b);\n    printf(\"%d * %d = %d\\n\", a, b, a * b);\n    return 0;\n}\n",
+  "stdin": "3 5"
+ },
+ {
+  "title": "九九乘法表",
+  "code": "#include <stdio.h>\n\nint main(void) {\n    for (int i = 1; i <= 9; i++) {\n        for (int j = 1; j <= i; j++) {\n            printf(\"%dx%d=%-4d\", j, i, i * j);\n        }\n        printf(\"\\n\");\n    }\n    return 0;\n}\n",
+  "stdin": ""
+ },
+ {
+  "title": "素数筛",
+  "code": "#include <stdio.h>\n#include <stdbool.h>\n\n#define N 100\n\nint main(void) {\n    bool is_prime[N + 1];\n    for (int i = 0; i <= N; i++) is_prime[i] = true;\n    is_prime[0] = is_prime[1] = false;\n    for (int i = 2; i * i <= N; i++) {\n        if (is_prime[i]) {\n            for (int j = i * i; j <= N; j += i) is_prime[j] = false;\n        }\n    }\n    int count = 0;\n    printf(\"%d 以内的素数：\\n\", N);\n    for (int i = 2; i <= N; i++) {\n        if (is_prime[i]) {\n            printf(\"%4d\", i);\n            if (++count % 10 == 0) printf(\"\\n\");\n        }\n    }\n    printf(\"\\n共 %d 个\\n\", count);\n    return 0;\n}\n",
+  "stdin": ""
+ },
+ {
+  "title": "数学函数",
+  "code": "#include <stdio.h>\n#include <math.h>\n\nint main(void) {\n    double x = 2.0;\n    printf(\"sqrt(%.1f)   = %.4f\\n\", x, sqrt(x));\n    printf(\"pow(2, 10)   = %.0f\\n\", pow(2, 10));\n    printf(\"sin(PI/6)    = %.4f\\n\", sin(M_PI / 6));\n    printf(\"cos(PI/3)    = %.4f\\n\", cos(M_PI / 3));\n    printf(\"log(e)       = %.4f\\n\", log(M_E));\n    printf(\"floor(-2.5)  = %.1f\\n\", floor(-2.5));\n    printf(\"ceil(-2.5)   = %.1f\\n\", ceil(-2.5));\n    printf(\"fabs(-3.75)  = %.2f\\n\", fabs(-3.75));\n    printf(\"圆周率约为   %.10f\\n\", 4 * atan(1.0));\n    return 0;\n}\n",
+  "stdin": ""
+ }
+]
