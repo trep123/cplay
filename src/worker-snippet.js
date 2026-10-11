@@ -7,7 +7,9 @@ self.onmessage = function (ev) {
   function send() { if (buf) { self.postMessage({ type: 'out', text: buf }); buf = ''; } last = now(); }
   var r = self.CInterp.run(String(data.source || ''), String(data.stdin || ''), {
     maxSteps: data.maxSteps || 2e9,
-    onStdout: function (s) { buf += s; if (now() - last > 16 || buf.length > 65536) send(); }
+    files: data.files || null,
+    onStdout: function (s) { buf += s; if (now() - last > 16 || buf.length > 65536) send(); },
+    onStderr: function (s) { send(); self.postMessage({ type: 'err', text: s }); }
   });
   send();
   self.postMessage({ type: 'done', exitCode: r.exitCode, error: r.error, ms: Math.round(now() - t0) });
