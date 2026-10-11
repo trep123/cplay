@@ -48,5 +48,29 @@
   "title": "数学函数",
   "code": "#include <stdio.h>\n#include <math.h>\n\nint main(void) {\n    double x = 2.0;\n    printf(\"sqrt(%.1f)   = %.4f\\n\", x, sqrt(x));\n    printf(\"pow(2, 10)   = %.0f\\n\", pow(2, 10));\n    printf(\"sin(PI/6)    = %.4f\\n\", sin(M_PI / 6));\n    printf(\"cos(PI/3)    = %.4f\\n\", cos(M_PI / 3));\n    printf(\"log(e)       = %.4f\\n\", log(M_E));\n    printf(\"floor(-2.5)  = %.1f\\n\", floor(-2.5));\n    printf(\"ceil(-2.5)   = %.1f\\n\", ceil(-2.5));\n    printf(\"fabs(-3.75)  = %.2f\\n\", fabs(-3.75));\n    printf(\"圆周率约为   %.10f\\n\", 4 * atan(1.0));\n    return 0;\n}\n",
   "stdin": ""
+ },
+ {
+  "title": "goto 统一清理",
+  "code": "#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n\n/* 经典写法：出错时用 goto 跳到统一的清理代码，按相反顺序释放资源 */\nint process(int n, int fail_at) {\n    int ret = -1;\n    int *nums = NULL;\n    char *buf = NULL;\n\n    nums = malloc(n * sizeof(int));\n    if (nums == NULL || fail_at == 1) {\n        printf(\"  第 1 步失败\\n\");\n        goto cleanup_nums;\n    }\n    for (int i = 0; i < n; i++) nums[i] = i * i;\n\n    buf = malloc(64);\n    if (buf == NULL || fail_at == 2) {\n        printf(\"  第 2 步失败\\n\");\n        goto cleanup_buf;\n    }\n    int sum = 0;\n    for (int i = 0; i < n; i++) sum += nums[i];\n    sprintf(buf, \"平方和 = %d\", sum);\n    printf(\"  成功：%s\\n\", buf);\n    ret = 0;\n\ncleanup_buf:\n    free(buf);\ncleanup_nums:\n    free(nums);\n    printf(\"  已释放资源，返回 %d\\n\", ret);\n    return ret;\n}\n\nint main(void) {\n    for (int f = 0; f <= 2; f++) {\n        printf(\"fail_at = %d:\\n\", f);\n        process(5, f);\n    }\n\n    /* goto 也能一次跳出多层循环 */\n    int i, j;\n    for (i = 1; i <= 9; i++)\n        for (j = 1; j <= 9; j++)\n            if (i * j == 42) goto found;\n    printf(\"没有找到\\n\");\n    return 0;\nfound:\n    printf(\"找到 %d x %d = 42\\n\", i, j);\n    return 0;\n}\n",
+  "stdin": ""
+ },
+ {
+  "title": "位域结构体",
+  "code": "#include <stdio.h>\n\n/* 用位域把多个小字段压缩进一个 16 位整数 */\nstruct Date {\n    unsigned short day   : 5;   /* 1..31 */\n    unsigned short month : 4;   /* 1..12 */\n    unsigned short year  : 7;   /* 2000 年起的偏移 0..127 */\n};\n\nstruct Flags {\n    unsigned char readable   : 1;\n    unsigned char writable   : 1;\n    unsigned char executable : 1;\n    signed   char level      : 3;  /* 有符号：-4..3 */\n};\n\nint main(void) {\n    struct Date d = { .day = 12, .month = 10, .year = 26 };\n    printf(\"日期：%u-%02u-%02u\\n\", 2000 + d.year, d.month, d.day);\n    printf(\"sizeof(struct Date)  = %zu 字节\\n\", sizeof(struct Date));\n\n    unsigned short raw = *(unsigned short *)&d;\n    printf(\"内存中的位模式：0x%04x\\n\", raw);\n\n    struct Flags f = {1, 0, 1, -2};\n    printf(\"rwx = %d%d%d, level = %d\\n\", f.readable, f.writable, f.executable, f.level);\n    f.level = 3;\n    f.level++;          /* 3 位有符号数溢出：3 + 1 -> -4 */\n    printf(\"level 加一后 = %d\\n\", f.level);\n    d.day = 40;         /* 只保留低 5 位：40 -> 8 */\n    printf(\"day 写入 40 后 = %u\\n\", d.day);\n    printf(\"sizeof(struct Flags) = %zu 字节\\n\", sizeof(struct Flags));\n    return 0;\n}\n",
+  "stdin": ""
+ },
+ {
+  "title": "变长数组矩阵",
+  "code": "#include <stdio.h>\n\n/* C99 变长数组（VLA）：数组大小在运行时决定，也可以作为函数参数 */\nvoid fill(int r, int c, int m[r][c]) {\n    for (int i = 0; i < r; i++)\n        for (int j = 0; j < c; j++)\n            m[i][j] = (i + 1) * (j + 1);\n}\n\nvoid multiply(int n, int k, int m, int a[n][k], int b[k][m], int out[n][m]) {\n    for (int i = 0; i < n; i++)\n        for (int j = 0; j < m; j++) {\n            out[i][j] = 0;\n            for (int t = 0; t < k; t++) out[i][j] += a[i][t] * b[t][j];\n        }\n}\n\nvoid print(int r, int c, int m[r][c]) {\n    for (int i = 0; i < r; i++) {\n        for (int j = 0; j < c; j++) printf(\"%5d\", m[i][j]);\n        printf(\"\\n\");\n    }\n}\n\nint main(void) {\n    int n, k, m;\n    scanf(\"%d %d %d\", &n, &k, &m);\n    int a[n][k], b[k][m], c[n][m];\n    fill(n, k, a);\n    fill(k, m, b);\n    multiply(n, k, m, a, b, c);\n    printf(\"A (%d x %d):\\n\", n, k); print(n, k, a);\n    printf(\"B (%d x %d):\\n\", k, m); print(k, m, b);\n    printf(\"A x B:\\n\");             print(n, m, c);\n    printf(\"sizeof(c) = %zu 字节, 每行 %zu 字节\\n\", sizeof(c), sizeof(c[0]));\n    return 0;\n}\n",
+  "stdin": "2 3 4\n"
+ },
+ {
+  "title": "多文件：头文件与模块",
+  "code": "#include <stdio.h>\n#include \"stack.h\"\n\n/* 多文件示例：点上方的 stack.h / stack.c 标签查看另外两个文件 */\nint main(void) {\n    Stack s;\n    stack_init(&s);\n    for (int i = 1; i <= 5; i++) stack_push(&s, i * i);\n    printf(\"栈里有 %d 个元素，栈顶是 %d\\n\", stack_size(&s), stack_peek(&s));\n    while (!stack_empty(&s)) printf(\"%d \", stack_pop(&s));\n    printf(\"\\n累计 push 次数：%d\\n\", push_count);\n    return 0;\n}\n",
+  "stdin": "",
+  "files": {
+   "stack.h": "#ifndef STACK_H\n#define STACK_H\n\n#include <stdbool.h>\n\n#define STACK_CAP 16\n\ntypedef struct {\n    int data[STACK_CAP];\n    int top;\n} Stack;\n\nextern int push_count;   /* 定义在 stack.c 中 */\n\nvoid stack_init(Stack *s);\nvoid stack_push(Stack *s, int v);\nint  stack_pop(Stack *s);\nint  stack_peek(const Stack *s);\nint  stack_size(const Stack *s);\nbool stack_empty(const Stack *s);\n\n#endif\n",
+   "stack.c": "#include <stdio.h>\n#include <stdlib.h>\n#include \"stack.h\"\n\nint push_count = 0;\n\n/* static 函数只在本文件内可见 */\nstatic void check(bool ok, const char *msg) {\n    if (!ok) {\n        fprintf(stderr, \"栈错误：%s\\n\", msg);\n        exit(1);\n    }\n}\n\nvoid stack_init(Stack *s) { s->top = 0; }\n\nvoid stack_push(Stack *s, int v) {\n    check(s->top < STACK_CAP, \"栈已满\");\n    s->data[s->top++] = v;\n    push_count++;\n}\n\nint stack_pop(Stack *s) {\n    check(s->top > 0, \"栈为空\");\n    return s->data[--s->top];\n}\n\nint stack_peek(const Stack *s) { check(s->top > 0, \"栈为空\"); return s->data[s->top - 1]; }\nint stack_size(const Stack *s) { return s->top; }\nbool stack_empty(const Stack *s) { return s->top == 0; }\n"
+  }
  }
 ]
