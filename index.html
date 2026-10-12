@@ -2,209 +2,361 @@
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>C 语言在线运行平台</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f5f7" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1d1d1f" />
+    <title>CPlay · C 语言在线运行</title>
     <link rel="stylesheet" href="hark.css" />
     <link rel="stylesheet" href="hark-hero.css" />
     <link rel="stylesheet" href="hark-charts.css" />
     <style>
       html, body { height: 100%; }
-      body { overflow: hidden; }
+      body { overflow: hidden; overscroll-behavior: none; }
       .x-app {
         --x-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", "Noto Sans Mono CJK SC", monospace;
+        --x-fs: 14px;
         --x-lh: 21px;
+        --x-pad-y: 12px;
+        --x-pad-x: 14px;
+        /* editor surfaces follow the page theme */
+        --x-surface: light-dark(#ffffff, #161f39);
+        --x-surface-2: light-dark(#fafafb, #18223f);
+        --x-text: light-dark(#1d1d1f, #f5f5f7);
+        --x-muted: light-dark(#6e6e73, #a1a1a6);
+        --x-faint: light-dark(#1d1d1f0f, #f5f5f714);
+        --x-curline: light-dark(#1d1d1f08, #f5f5f70d);
+        --x-accent: light-dark(#3657c2, #9fb2e6);
+        --x-sel: light-dark(#3657c22e, #9fb2e640);
+        --x-err: var(--fill-system-red);
+        --x-ok: var(--fill-system-green);
+        --x-k: light-dark(#8a3ea6, #c4b9de);
+        --x-t: light-dark(#1b6e72, #8fc3c1);
+        --x-p: light-dark(#a3325c, #e0a9b3);
+        --x-s: light-dark(#2d6a3c, #9cc4a6);
+        --x-c: light-dark(#94500f, #e6c39b);
+        --x-n: light-dark(#835b00, #e6d29c);
+        --x-m: light-dark(#6e6e73, #8e95a8);
         height: 100vh;
         height: 100dvh;
         display: grid;
         grid-template-rows: auto minmax(0, 1fr) auto;
-        gap: 12px;
-        padding: 12px var(--gutter) 10px;
-        max-width: 1600px;
+        gap: 10px;
+        padding: max(10px, env(safe-area-inset-top)) max(var(--gutter), env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(var(--gutter), env(safe-area-inset-left));
+        max-width: 1680px;
         margin: 0 auto;
       }
-      .x-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
-      .x-brand { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; min-width: 0; }
-      .x-brand h1 { font: var(--type-heading); }
-      .x-brand p { font: var(--type-caption); color: var(--text-secondary); }
-      .x-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+      .x-hidden { display: none !important; }
+
+      /* ---------- top bar ---------- */
+      .x-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+      .x-brand { display: flex; align-items: baseline; gap: 10px; min-width: 0; margin-right: auto; }
+      .x-brand h1 { font: var(--type-heading); white-space: nowrap; }
+      .x-brand h1 b { font-weight: var(--weight-bold); }
+      .x-brand p { font: var(--type-caption); color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+      .x-actions { display: flex; align-items: center; gap: 8px; flex: none; }
       .x-btn, .x-select {
         display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-        min-height: 34px; padding: 5px 12px;
+        min-height: 36px; padding: 6px 12px;
         border-radius: var(--r-s);
         background: var(--fill-primary-on);
         color: var(--text-primary);
         border: 1px solid var(--stroke-primary);
-        font: var(--type-tag);
+        font: var(--type-label);
+        white-space: nowrap;
         cursor: pointer;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
         transition: box-shadow var(--dur-quick) ease, opacity var(--dur-quick) ease;
       }
-      .x-select { padding-right: 8px; max-width: 100%; }
+      .x-select { padding-right: 8px; max-width: 220px; }
       .x-btn:hover:not(:disabled), .x-select:hover { box-shadow: inset 0 0 0 100px var(--hover-wash); }
       .x-btn:disabled { opacity: 0.4; cursor: default; }
-      .x-btn--primary { background: var(--fill-primary); color: var(--text-primary-on); border-color: transparent; }
+      .x-btn--primary { background: var(--fill-primary); color: var(--text-primary-on); border-color: transparent; padding-inline: 16px; }
       .x-btn--primary:hover:not(:disabled) { box-shadow: inset 0 0 0 100px var(--hover-wash-primary-on); }
-      .x-kbd { font: var(--type-caption); opacity: 0.7; }
-      .x-hidden { display: none; }
+      .x-btn--danger { color: var(--fill-system-red); }
+      .x-btn--ghost { background: transparent; border-color: transparent; color: var(--text-secondary); min-height: 30px; padding: 4px 8px; font: var(--type-tag); }
+      .x-btn svg { width: 14px; height: 14px; flex: none; }
+      .x-kbd { font: var(--type-caption); opacity: 0.66; font-family: var(--sans); }
+      .x-more { position: relative; display: flex; }
+      .x-more__btn { display: none; width: 40px; padding: 0; font-size: 18px; letter-spacing: 1px; }
+      .x-menu { display: flex; align-items: center; gap: 8px; }
+      .x-menu__label { display: none; }
 
-      .x-work { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 12px; min-height: 0; }
-      .x-side { display: grid; grid-template-rows: minmax(96px, 22%) minmax(0, 1fr); gap: 12px; min-height: 0; }
+      /* segmented switch (phone) */
+      .x-seg { display: none; }
+
+      /* ---------- work area ---------- */
+      .x-work { display: grid; grid-template-columns: minmax(0, var(--x-l, 3fr)) 12px minmax(0, var(--x-r, 2fr)); min-height: 0; }
+      .x-split { position: relative; cursor: col-resize; touch-action: none; outline: none; }
+      .x-split::after { content: ""; position: absolute; top: 50%; left: 50%; width: 4px; height: 44px; margin: -22px 0 0 -2px; border-radius: 4px; background: var(--stroke-primary); transition: background var(--dur-quick) ease, height var(--dur-quick) ease; }
+      .x-split:hover::after, .x-split:focus-visible::after, .x-split.is-drag::after { background: var(--x-accent); height: 72px; margin-top: -36px; }
+      .x-work.is-drag, .x-work.is-drag * { cursor: col-resize !important; user-select: none; -webkit-user-select: none; }
+      .x-side { display: grid; grid-template-rows: minmax(96px, 26%) minmax(0, 1fr); gap: 12px; min-height: 0; min-width: 0; }
       .x-panel {
-        color-scheme: dark;
-        background: var(--hero-surface);
-        color: var(--hero-text);
+        background: var(--x-surface);
+        color: var(--x-text);
         border: 1px solid var(--stroke-primary);
         border-radius: var(--r-m);
         display: flex; flex-direction: column;
         min-height: 0; min-width: 0;
         overflow: hidden;
       }
-      .x-panel:focus-within { box-shadow: 0 0 0 2px var(--chart-1); }
+      .x-panel:focus-within { border-color: color-mix(in srgb, var(--x-accent) 55%, transparent); }
       .x-panel__head {
         display: flex; align-items: center; justify-content: space-between; gap: 8px;
-        padding: 8px 14px;
-        border-bottom: 1px solid var(--stroke-secondary);
-        font: var(--type-tag); color: var(--text-secondary);
+        min-height: 40px; padding: 4px 8px 4px 14px;
+        background: var(--x-surface-2);
+        border-bottom: 1px solid var(--x-faint);
+        font: var(--type-tag); color: var(--x-muted);
       }
-      .x-panel__head label { cursor: default; }
-      .x-mono { font-family: var(--x-mono); font-size: 14px; line-height: var(--x-lh); font-weight: 400; letter-spacing: 0; font-variant-ligatures: none; font-kerning: none; tab-size: 4; -moz-tab-size: 4; }
+      .x-panel__title { display: flex; align-items: baseline; gap: 8px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .x-panel__title small { font: var(--type-caption); opacity: 0.85; overflow: hidden; text-overflow: ellipsis; }
+      .x-mono { font-family: var(--x-mono); font-size: var(--x-fs); line-height: var(--x-lh); font-weight: 400; letter-spacing: 0; font-variant-ligatures: none; font-kerning: none; tab-size: 4; -moz-tab-size: 4; }
 
       /* file tabs */
-      .x-edhead { gap: 10px; padding: 5px 14px 5px 8px; }
-      .x-tabs { display: flex; align-items: center; gap: 2px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: thin; }
-      .x-tab { display: inline-flex; align-items: center; flex: none; border-radius: var(--r-s); color: var(--text-secondary); }
-      .x-tab.is-active { background: color-mix(in srgb, var(--hero-text) 12%, transparent); color: var(--hero-text); }
-      .x-tab__name, .x-tab__x, .x-tab-add { display: inline-flex; align-items: center; background: none; border: 0; margin: 0; font: inherit; color: inherit; cursor: pointer; border-radius: var(--r-s); }
-      .x-tab__name { padding: 4px 8px; font-family: var(--x-mono); font-size: 13px; white-space: nowrap; }
-      .x-tab__x { padding: 2px 6px 2px 2px; font-size: 15px; line-height: 1; opacity: 0.6; }
+      .x-edhead { gap: 6px; padding: 4px 8px 4px 6px; }
+      .x-tabs { display: flex; align-items: center; gap: 2px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+      .x-tabs::-webkit-scrollbar { display: none; }
+      .x-tab { display: inline-flex; align-items: center; flex: none; border-radius: 9px; color: var(--x-muted); }
+      .x-tab.is-active { background: var(--x-faint); color: var(--x-text); }
+      .x-tab__name, .x-tab__x, .x-tab-add { display: inline-flex; align-items: center; justify-content: center; background: none; border: 0; margin: 0; font: inherit; color: inherit; cursor: pointer; border-radius: 9px; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+      .x-tab__name { min-height: 30px; padding: 4px 10px; font-family: var(--x-mono); font-size: 13px; white-space: nowrap; }
+      .x-tab__x { min-height: 30px; min-width: 26px; padding: 0 6px 0 0; font-size: 16px; line-height: 1; opacity: 0.55; }
       .x-tab__x:hover { opacity: 1; color: var(--fill-system-red); }
+      .x-tab__x.is-confirm { opacity: 1; color: var(--fill-system-red); font: var(--type-tag); padding: 0 8px; }
       .x-tab__name:hover, .x-tab-add:hover { box-shadow: inset 0 0 0 100px var(--hover-wash); }
-      .x-tab-add { flex: none; padding: 4px 8px; white-space: nowrap; color: var(--text-secondary); }
-      .x-tab__input { width: 14ch; margin: 1px 2px; padding: 3px 6px; font-family: var(--x-mono); font-size: 13px; background: transparent; color: var(--hero-text); border: 1px solid var(--chart-1); border-radius: var(--r-s); outline: none; }
-      .x-edhead #pos { flex: none; white-space: nowrap; }
+      .x-tab-add { flex: none; min-height: 30px; padding: 4px 10px; white-space: nowrap; color: var(--x-muted); font: var(--type-tag); }
+      .x-tab-add b { font-size: 16px; font-weight: 400; line-height: 1; }
+      .x-tab__input { width: 14ch; margin: 1px 2px; padding: 3px 6px; font-family: var(--x-mono); font-size: 16px; background: var(--x-surface); color: var(--x-text); border: 1px solid var(--x-accent); border-radius: 8px; outline: none; }
+      .x-pos { flex: none; white-space: nowrap; font: var(--type-caption); color: var(--x-muted); font-variant-numeric: tabular-nums; padding-left: 4px; }
 
       /* editor */
       .x-editor { position: relative; flex: 1; display: flex; min-height: 0; }
-      .x-gutter { flex: none; position: relative; overflow: hidden; border-right: 1px solid var(--stroke-secondary); color: var(--text-secondary); user-select: none; -webkit-user-select: none; }
-      .x-gutter__in { padding: 12px 10px 12px 12px; text-align: right; min-width: 3.2em; will-change: transform; }
-      .x-gutter__in div { height: var(--x-lh); }
-      .x-gutter__in .is-err { color: var(--fill-system-red); font-weight: 600; }
+      .x-gutter { flex: none; position: relative; overflow: hidden; background: var(--x-surface-2); border-right: 1px solid var(--x-faint); color: var(--x-muted); user-select: none; -webkit-user-select: none; }
+      .x-gutter__in { padding: var(--x-pad-y) 10px var(--x-pad-y) 10px; text-align: right; min-width: calc(3ch + 20px); font-variant-numeric: tabular-nums; will-change: transform; }
+      .x-gutter__in div { height: var(--x-lh); opacity: 0.7; }
+      .x-gutter__in .is-cur { opacity: 1; color: var(--x-text); }
+      .x-gutter__in .is-err { opacity: 1; color: var(--x-err); font-weight: 600; }
       .x-code { position: relative; flex: 1; min-width: 0; overflow: hidden; }
       .x-layer { position: absolute; top: 0; left: 0; min-width: 100%; pointer-events: none; will-change: transform; }
-      .x-hl, .x-ta { margin: 0; padding: 12px 16px; border: 0; white-space: pre; overflow-wrap: normal; word-wrap: normal; }
-      .x-hl { color: var(--hero-text); min-height: 100%; }
+      .x-curline { position: absolute; left: 0; right: 0; top: 0; height: var(--x-lh); background: var(--x-curline); }
+      .x-hl, .x-ta { margin: 0; padding: var(--x-pad-y) var(--x-pad-x); border: 0; white-space: pre; overflow-wrap: normal; word-wrap: normal; }
+      .x-hl { position: relative; color: var(--x-text); min-height: 100%; }
       .x-ta {
         position: absolute; inset: 0; width: 100%; height: 100%;
         overflow: auto; resize: none; outline: none;
         background: transparent;
         color: transparent; -webkit-text-fill-color: transparent;
-        caret-color: var(--hero-text);
+        caret-color: var(--x-text);
+        scrollbar-width: thin;
       }
-      .x-ta::selection { background: color-mix(in srgb, var(--chart-1) 32%, transparent); }
-      .x-flash { position: absolute; left: 0; right: 0; height: var(--x-lh); background: color-mix(in srgb, var(--fill-system-red) 30%, transparent); opacity: 0; }
+      .x-ta::selection { background: var(--x-sel); }
+      .x-mirror { position: absolute; top: 0; left: 0; visibility: hidden; white-space: pre; padding: 0; margin: 0; border: 0; pointer-events: none; }
+      .x-flash { position: absolute; left: 0; right: 0; height: var(--x-lh); background: color-mix(in srgb, var(--x-err) 26%, transparent); opacity: 0; }
       .x-flash.is-on { animation: x-flash 1.6s var(--ease-out); }
       @keyframes x-flash { 0%, 40% { opacity: 1; } 100% { opacity: 0; } }
-      .x-hl .k { color: var(--chart-4); }
-      .x-hl .t { color: var(--chart-6); }
-      .x-hl .p { color: var(--chart-7); }
-      .x-hl .s { color: var(--chart-2); }
-      .x-hl .c { color: var(--chart-3); }
-      .x-hl .n { color: var(--chart-5); }
-      .x-hl .m { color: var(--text-secondary); font-style: italic; }
+      .x-hl .k { color: var(--x-k); }
+      .x-hl .t { color: var(--x-t); }
+      .x-hl .p { color: var(--x-p); }
+      .x-hl .s { color: var(--x-s); }
+      .x-hl .c { color: var(--x-c); }
+      .x-hl .n { color: var(--x-n); }
+      .x-hl .m { color: var(--x-m); font-style: italic; }
 
       /* stdin + output */
-      .x-stdin { flex: 1; min-height: 0; width: 100%; margin: 0; padding: 10px 14px; border: 0; resize: none; outline: none; background: transparent; color: var(--hero-text); white-space: pre; }
-      .x-stdin::placeholder { color: var(--text-secondary); }
-      .x-out { flex: 1; min-height: 0; margin: 0; padding: 12px 14px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
-      .x-out:empty::before { content: "点击「运行」后，程序输出会显示在这里。"; color: var(--text-secondary); font-family: var(--sans); }
-      .x-out .e { color: var(--fill-system-red); }
-      .x-out .i { color: var(--text-secondary); }
+      .x-stdin { flex: 1; min-height: 0; width: 100%; margin: 0; padding: 10px var(--x-pad-x); border: 0; resize: none; outline: none; background: transparent; color: var(--x-text); white-space: pre; }
+      .x-stdin::placeholder { color: var(--x-muted); opacity: 0.8; font-family: var(--sans); }
+      .x-out { flex: 1; min-height: 0; margin: 0; padding: 12px var(--x-pad-x); overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; outline: none; }
+      .x-out:empty::before { content: "点击「运行」后，程序输出会显示在这里。"; color: var(--x-muted); font-family: var(--sans); font-size: 14px; }
+      .x-out .e { color: var(--x-err); }
+      .x-out .i { color: var(--x-muted); }
       .x-status {
-        display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px;
+        display: flex; align-items: center; flex-wrap: wrap; gap: 2px 8px;
         min-height: 40px; padding: 8px 14px;
-        border-top: 1px solid var(--stroke-secondary);
-        font: var(--type-small); color: var(--text-secondary);
+        background: var(--x-surface-2);
+        border-top: 1px solid var(--x-faint);
+        font: var(--type-small); color: var(--x-muted);
       }
-      .x-status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; flex: none; box-shadow: inset 0 0 0 1.5px var(--text-tertiary); }
-      .x-status.is-ok::before { background: var(--fill-system-green); box-shadow: none; }
-      .x-status.is-err { color: var(--fill-system-red); }
-      .x-status.is-err::before { background: var(--fill-system-red); box-shadow: none; }
-      .x-status.is-run::before { width: 12px; height: 12px; box-shadow: none; border: 2px solid var(--stroke-primary); border-top-color: var(--hero-text); animation: x-spin 0.8s linear infinite; }
+      .x-status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; flex: none; box-shadow: inset 0 0 0 1.5px currentColor; opacity: 0.6; }
+      .x-status.is-ok::before { background: var(--x-ok); box-shadow: none; opacity: 1; }
+      .x-status.is-err { color: var(--x-err); }
+      .x-status.is-err::before { background: var(--x-err); box-shadow: none; opacity: 1; }
+      .x-status.is-run::before { width: 12px; height: 12px; box-shadow: none; opacity: 1; border: 2px solid var(--x-faint); border-top-color: var(--x-text); animation: x-spin 0.8s linear infinite; }
       @keyframes x-spin { to { transform: rotate(360deg); } }
       @media (prefers-reduced-motion: reduce) { .x-status.is-run::before { animation-duration: 2.4s; } .x-flash.is-on { animation-duration: 2.4s; } }
-      .x-linelink { background: none; border: 0; padding: 0; margin: 0; font: inherit; color: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+      .x-linelink { background: none; border: 0; padding: 0; margin: 0; font: inherit; font-weight: 600; color: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
       .x-msg { overflow-wrap: anywhere; min-width: 0; }
+      .x-dim { color: var(--x-muted); }
 
-      .x-foot { font: var(--type-caption); color: var(--text-secondary); text-align: center; }
+      .x-foot { font: var(--type-caption); color: var(--text-secondary); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-      @media (max-width: 899px) {
-        body { overflow: auto; }
-        .x-app { height: auto; min-height: 100dvh; grid-template-rows: auto auto auto; }
-        .x-tools { width: 100%; }
-        .x-select { flex: 1 1 100%; }
-        .x-btn { flex: 1 1 auto; min-height: var(--tap); }
-        .x-work { grid-template-columns: minmax(0, 1fr); }
-        .x-edpanel { height: 50vh; height: 50dvh; min-height: 260px; }
-        .x-side { grid-template-rows: auto auto; }
-        .x-stdin { height: 96px; flex: none; }
-        .x-out { min-height: 220px; max-height: 60vh; }
-        .x-linelink { display: inline-flex; align-items: center; min-height: var(--tap); margin-block: -12px; }
-        .x-tab__name, .x-tab__x, .x-tab-add { min-height: var(--tap); }
-        .x-edhead #pos { display: none; }
+      /* ---------- completion popup ---------- */
+      .x-ac {
+        position: fixed; z-index: 60; left: 0; top: 0;
+        width: 380px; max-width: calc(100vw - 16px);
+        display: flex; flex-direction: column;
+        background: var(--x-surface); color: var(--x-text);
+        border: 1px solid var(--stroke-primary); border-radius: 12px;
+        box-shadow: 0 10px 32px rgb(0 0 0 / 0.22);
+        overflow: hidden;
+        font: var(--type-small);
       }
-      @media (max-width: 899px) and (pointer: coarse) { .x-select { min-height: var(--tap); } }
+      .x-ac[hidden] { display: none; }
+      .x-ac__list { list-style: none; margin: 0; padding: 4px; overflow-y: auto; max-height: 260px; overscroll-behavior: contain; }
+      .x-ac__item { display: flex; align-items: center; gap: 8px; height: 28px; padding: 0 8px; border-radius: 8px; cursor: pointer; white-space: nowrap; min-width: 0; }
+      .x-ac__item.is-sel { background: var(--x-sel); }
+      .x-ac__tag { flex: none; width: 3.6em; padding: 3px 0; border-radius: 5px; text-align: center; font: var(--weight-medium) 11px/1.1 var(--sans); background: var(--x-faint); color: var(--x-muted); }
+      .x-ac__tag[data-k="函数"] { color: var(--x-accent); background: color-mix(in srgb, var(--x-accent) 14%, transparent); }
+      .x-ac__tag[data-k="关键字"] { color: var(--x-k); background: color-mix(in srgb, var(--x-k) 14%, transparent); }
+      .x-ac__tag[data-k="类型"] { color: var(--x-t); background: color-mix(in srgb, var(--x-t) 14%, transparent); }
+      .x-ac__tag[data-k="片段"] { color: var(--x-s); background: color-mix(in srgb, var(--x-s) 15%, transparent); }
+      .x-ac__tag[data-k="宏"], .x-ac__tag[data-k="头文件"] { color: var(--x-p); background: color-mix(in srgb, var(--x-p) 14%, transparent); }
+      .x-ac__tag[data-k="变量"], .x-ac__tag[data-k="成员"] { color: var(--x-c); background: color-mix(in srgb, var(--x-c) 14%, transparent); }
+      .x-ac__label { font-family: var(--x-mono); font-size: 13px; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; min-width: 0; }
+      .x-ac__label b { font-weight: 700; color: var(--x-accent); }
+      .x-ac__detail { margin-left: auto; padding-left: 8px; flex: 0 1000 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-family: var(--x-mono); font-size: 12px; color: var(--x-muted); }
+      .x-ac__doc { flex: none; padding: 7px 12px 8px; border-top: 1px solid var(--x-faint); background: var(--x-surface-2); font: var(--type-caption); color: var(--x-muted); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+      .x-ac__doc code { font-family: var(--x-mono); color: var(--x-text); }
+      .x-ac__doc:empty { display: none; }
+
+      /* ---------- mid widths: secondary actions fold into 更多 ---------- */
+      @media (max-width: 1099px) {
+        .x-more__btn { display: inline-flex; }
+        .x-menu {
+          position: absolute; top: calc(100% + 6px); right: 0; z-index: 40;
+          display: none; flex-direction: column; align-items: stretch; gap: 4px;
+          width: 248px; padding: 8px;
+          background: var(--fill-primary-on); color: var(--text-primary);
+          border: 1px solid var(--stroke-primary); border-radius: var(--r-m);
+          box-shadow: var(--hark-shadow), 0 2px 10px rgb(0 0 0 / 0.08);
+        }
+        .x-more.is-open .x-menu { display: flex; }
+        .x-menu__label { display: block; padding: 4px 6px 0; font: var(--type-caption); color: var(--text-secondary); }
+        .x-menu .x-select { max-width: none; width: 100%; min-height: 44px; }
+        .x-menu .x-btn { justify-content: flex-start; min-height: 44px; border-color: transparent; background: transparent; padding-inline: 10px; }
+        .x-menu hr { border: 0; border-top: 1px solid var(--stroke-secondary); margin: 4px 0; }
+      }
+      @media (min-width: 1100px) { .x-menu hr { display: none; } }
+
+      /* ---------- phone ---------- */
+      @media (max-width: 719px) {
+        .x-app { --gutter: 10px; --x-pad-x: 12px; height: var(--vvh, 100dvh); grid-template-rows: auto minmax(0, 1fr); gap: 8px; padding-top: max(8px, env(safe-area-inset-top)); }
+        .x-brand, .x-foot, .x-kbd, .x-split, .x-pos { display: none; }
+        .x-top { gap: 6px; }
+        .x-seg {
+          display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); flex: 1 1 auto; min-width: 0; max-width: 300px; margin-right: auto;
+          padding: 0; border-radius: 13px; background: var(--fill-tertiary);
+        }
+        .x-seg button {
+          position: relative; min-height: var(--tap); padding: 0 4px; border: 3px solid transparent; background-clip: padding-box; border-radius: 13px;
+          background: transparent; color: var(--text-secondary); font: var(--type-label); cursor: pointer;
+          touch-action: manipulation; -webkit-tap-highlight-color: transparent; white-space: nowrap;
+        }
+        .x-seg button[aria-selected="true"] { background: light-dark(#ffffff, #3a3a3c); color: var(--text-primary); box-shadow: 0 1px 3px rgb(0 0 0 / 0.12); }
+        .x-seg button.has-new::after { content: ""; position: absolute; top: 5px; right: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--fill-system-orange); }
+        .x-seg button.has-err::after { background: var(--fill-system-red); }
+        .x-btn, .x-more__btn { min-height: var(--tap); }
+        .x-more__btn { width: var(--tap); }
+        .x-btn--primary { padding-inline: 14px; }
+        .x-app:not(.is-running) #stop, .x-app.is-running #run { display: none; }
+        .x-work { grid-template: minmax(0, 1fr) / minmax(0, 1fr); }
+        .x-edpanel, .x-side { grid-area: 1 / 1; }
+        .x-side { grid-template-rows: minmax(0, 1fr); gap: 0; }
+        .x-inpanel, .x-outpanel { grid-area: 1 / 1; }
+        .x-app[data-view="code"] .x-side,
+        .x-app:not([data-view="code"]) .x-edpanel,
+        .x-app[data-view="input"] .x-outpanel,
+        .x-app[data-view="output"] .x-inpanel { visibility: hidden; pointer-events: none; }
+        .x-panel { border-radius: 14px; }
+        .x-panel__head { min-height: 44px; }
+        .x-tab__name, .x-tab__x, .x-tab-add { min-height: var(--tap); }
+        .x-tab__x { min-width: 34px; }
+        .x-tab-add { min-width: var(--tap); padding: 0 12px; }
+        .x-tab-add span { display: none; }
+        .x-panel__head .x-btn--ghost { min-height: var(--tap); padding-inline: 12px; }
+        .x-linelink { display: inline-flex; align-items: center; min-height: var(--tap); margin-block: -12px; }
+        .x-status { min-height: 44px; }
+        .x-gutter__in { padding-inline: 6px 8px; min-width: calc(2ch + 14px); }
+        .x-menu { right: 0; width: min(280px, calc(100vw - 20px)); }
+        .x-ac { width: min(360px, calc(100vw - 16px)); }
+      }
+      @media (pointer: coarse) {
+        .x-ac__item { height: 44px; }
+        .x-ac__list { max-height: 228px; }
+        .x-ac__label { font-size: 14px; }
+      }
+      @media (max-width: 359px) {
+        .x-seg button { font-size: 13px; }
+        .x-btn--primary { padding-inline: 10px; }
+      }
     </style>
   </head>
   <body>
-    <div class="x-app" id="top">
+    <div class="x-app" id="top" data-view="code">
       <header class="x-top">
         <div class="x-brand">
-          <h1>C 语言在线运行</h1>
-          <p>纯浏览器 · 无需服务器</p>
+          <h1><b>CPlay</b> · C 语言在线运行</h1>
+          <p>纯浏览器本地运行 · 无需服务器</p>
         </div>
-        <div class="x-tools">
-          <select class="x-select" id="examples" aria-label="示例程序"></select>
-          <button class="x-btn x-btn--primary" id="run" type="button" title="运行（Ctrl/⌘ + Enter）">运行 ▶</button>
-          <button class="x-btn" id="stop" type="button" disabled>停止 ■</button>
-          <button class="x-btn" id="clear" type="button">清空输出</button>
-          <button class="x-btn" id="download" type="button" title="下载当前标签页中的文件">下载文件</button>
-          <button class="x-btn" id="import" type="button" title="导入 .c 到当前标签页；导入 .h 会新建或覆盖同名标签页">导入文件</button>
-          <input class="x-hidden" id="file" type="file" accept=".c,.h,.txt,text/plain,text/x-c" tabindex="-1" aria-hidden="true" />
+        <div class="x-seg" id="seg" role="tablist" aria-label="切换面板">
+          <button type="button" role="tab" data-v="code" aria-selected="true" aria-controls="edpanel">代码</button>
+          <button type="button" role="tab" data-v="input" aria-selected="false" aria-controls="inpanel">输入</button>
+          <button type="button" role="tab" data-v="output" aria-selected="false" aria-controls="outpanel">输出</button>
+        </div>
+        <div class="x-actions">
+          <div class="x-more" id="more">
+            <button class="x-btn x-more__btn" id="morebtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="menu" aria-label="更多操作" title="更多操作">⋯</button>
+            <div class="x-menu" id="menu">
+              <span class="x-menu__label">示例程序</span>
+              <select class="x-select" id="examples" aria-label="示例程序"></select>
+              <hr />
+              <button class="x-btn" id="import" type="button" title="导入 .c 到当前标签页；导入 .h 会新建或覆盖同名标签页">导入文件</button>
+              <button class="x-btn" id="download" type="button" title="下载当前标签页中的文件">下载文件</button>
+              <input class="x-hidden" id="file" type="file" accept=".c,.h,.txt,text/plain,text/x-c" tabindex="-1" aria-hidden="true" />
+            </div>
+          </div>
+          <button class="x-btn x-btn--danger" id="stop" type="button" disabled>■ 停止</button>
+          <button class="x-btn x-btn--primary" id="run" type="button" title="运行（Ctrl/⌘ + Enter）">▶ 运行 <span class="x-kbd" id="runkbd">Ctrl ↵</span></button>
         </div>
       </header>
 
-      <main class="x-work">
-        <section class="x-panel x-edpanel" aria-label="代码编辑器">
+      <main class="x-work" id="work">
+        <section class="x-panel x-edpanel" id="edpanel" aria-label="代码编辑器">
           <div class="x-panel__head x-edhead">
             <div class="x-tabs" id="tabs" role="tablist" aria-label="源文件（双击文件名重命名）"></div>
-            <button class="x-tab-add" id="addfile" type="button" title="新建 .h 头文件或 .c 源文件">+ 新建文件</button>
-            <span id="pos">第 1 行，第 1 列</span>
+            <button class="x-tab-add" id="addfile" type="button" title="新建 .h 头文件或 .c 源文件" aria-label="新建文件"><b>+</b><span>&nbsp;新建文件</span></button>
+            <span class="x-pos" id="pos">第 1 行，第 1 列</span>
           </div>
           <div class="x-editor x-mono">
             <div class="x-gutter" aria-hidden="true"><div class="x-gutter__in" id="gutter"></div></div>
-            <div class="x-code">
+            <div class="x-code" id="codebox">
               <div class="x-layer" id="layer" aria-hidden="true">
+                <div class="x-curline" id="curline"></div>
                 <div class="x-flash" id="flash"></div>
                 <pre class="x-hl x-mono" id="hl"></pre>
               </div>
-              <textarea class="x-ta x-mono" id="code" wrap="off" spellcheck="false" autocapitalize="off" autocorrect="off" autocomplete="off" aria-label="C 源代码（Ctrl/⌘ + Enter 运行，Esc 后按 Tab 可离开编辑器）"></textarea>
+              <div class="x-mirror x-mono" id="mirror" aria-hidden="true"></div>
+              <textarea class="x-ta x-mono" id="code" wrap="off" spellcheck="false" autocapitalize="off" autocorrect="off" autocomplete="off" aria-label="C 源代码（Ctrl/⌘ + Enter 运行，Ctrl + 空格 代码补全，Esc 后按 Tab 可离开编辑器）" aria-autocomplete="list" aria-haspopup="listbox"></textarea>
             </div>
           </div>
         </section>
 
+        <div class="x-split" id="split" role="separator" aria-orientation="vertical" aria-label="拖动调整编辑器宽度" aria-valuemin="25" aria-valuemax="80" aria-valuenow="60" tabindex="0" title="拖动调整宽度，双击恢复"></div>
+
         <div class="x-side">
-          <section class="x-panel" aria-label="标准输入">
-            <div class="x-panel__head"><label for="stdin">输入 (stdin)</label></div>
-            <textarea class="x-stdin x-mono" id="stdin" spellcheck="false" autocapitalize="off" autocorrect="off" autocomplete="off" placeholder="程序用 scanf / getchar 读取的内容写在这里"></textarea>
+          <section class="x-panel x-inpanel" id="inpanel" aria-label="标准输入">
+            <div class="x-panel__head"><label class="x-panel__title" for="stdin">输入 <small>stdin · scanf / getchar 从这里读取</small></label></div>
+            <textarea class="x-stdin x-mono" id="stdin" spellcheck="false" autocapitalize="off" autocorrect="off" autocomplete="off" placeholder="在这里填写程序要读取的输入"></textarea>
           </section>
-          <section class="x-panel" aria-label="输出">
-            <div class="x-panel__head"><span>输出</span></div>
+          <section class="x-panel x-outpanel" id="outpanel" aria-label="输出">
+            <div class="x-panel__head"><span class="x-panel__title">输出</span><button class="x-btn x-btn--ghost" id="clear" type="button" title="清空输出">清空</button></div>
             <pre class="x-out x-mono" id="out" role="log" tabindex="0"></pre>
             <div class="x-status" id="status" role="status" aria-live="polite">就绪</div>
           </section>
         </div>
       </main>
 
-      <footer class="x-foot">全部在你的浏览器本地运行 · 支持 C99 常用子集（指针、结构体、malloc、printf/scanf、string.h、math.h、goto、变长数组、位域等） · 可新建 .h / .c 文件组成多文件程序</footer>
+      <footer class="x-foot">全部在你的浏览器本地运行 · 支持 C99 常用子集（指针、结构体、malloc、printf/scanf、string.h、math.h、goto、变长数组、位域等） · 可新建 .h / .c 文件组成多文件程序 · Ctrl + 空格 代码补全</footer>
     </div>
 
     <script type="text/plain" id="worker-src">
@@ -2304,14 +2456,41 @@ self.onmessage = function (ev) {
       (function () {
         "use strict";
         var $ = function (id) { return document.getElementById(id); };
-        var ta = $("code"), hl = $("hl"), layer = $("layer"), gutter = $("gutter"), flash = $("flash");
+        var app = $("top"), ta = $("code"), hl = $("hl"), layer = $("layer"), gutter = $("gutter"), flash = $("flash"), curEl = $("curline"), mirror = $("mirror");
         var stdinEl = $("stdin"), out = $("out"), statusEl = $("status"), posEl = $("pos");
         var runBtn = $("run"), stopBtn = $("stop"), sel = $("examples"), fileIn = $("file"), tabsEl = $("tabs");
-        var LH = 21, IND = "    ";
+        var segEl = $("seg"), moreEl = $("more"), moreBtn = $("morebtn"), workEl = $("work"), splitEl = $("split");
+        var LH = 21, PADY = 12, IND = "    ";
+        function mq(q) { try { return window.matchMedia(q); } catch (e) { return { matches: false }; } }
+        var mqPhone = mq("(max-width: 719px)"), mqMenu = mq("(max-width: 1099px)"), mqCoarse = mq("(pointer: coarse)");
+        function isPhone() { return !!mqPhone.matches; }
+
+        /* ---------- platform tweaks ---------- */
+        var plat = String(navigator.platform || ""), ua = String(navigator.userAgent || "");
+        var isMac = /Mac|iP(hone|od|ad)/.test(plat);
+        var isIOS = /iP(hone|od|ad)/.test(plat) || /iPhone|iPad|iPod/.test(ua) || (/Mac/.test(plat) && navigator.maxTouchPoints > 1);
+        // iOS zooms into any focused field under 16px. maximum-scale stops that auto-zoom only; iOS still lets the user pinch-zoom.
+        if (isIOS) { var vpm = document.querySelector('meta[name="viewport"]'); if (vpm && !/maximum-scale/.test(vpm.content)) vpm.content += ", maximum-scale=1"; }
+        $("runkbd").textContent = isMac ? "⌘ ↵" : "Ctrl ↵";
+        runBtn.title = "运行（" + (isMac ? "⌘" : "Ctrl") + " + Enter）";
+        // Keep the app inside the visible area when an on-screen keyboard opens (phones).
+        var vv = window.visualViewport;
+        function fitViewport() {
+          if (!vv) return;
+          if (isPhone()) document.documentElement.style.setProperty("--vvh", Math.round(vv.height) + "px");
+          else document.documentElement.style.removeProperty("--vvh");
+        }
+        if (vv) { vv.addEventListener("resize", function () { fitViewport(); acPlace(); }); vv.addEventListener("scroll", acPlace); fitViewport(); }
+
+        /* ---------- optional persistence (normal pages only; sandboxed frames throw) ---------- */
+        var store = null;
+        try { var _ls = window.localStorage; _ls.setItem("cplay:t", "1"); _ls.removeItem("cplay:t"); store = _ls; } catch (e) { store = null; }
+        function sget(k) { try { return store ? store.getItem(k) : null; } catch (e) { return null; } }
+        function sset(k, v) { try { if (store) store.setItem(k, v); } catch (e) { /* quota or blocked */ } }
 
         /* ---------- syntax highlighting ---------- */
-        var KW = new Set("if else for while do return break continue switch case default sizeof typedef struct union enum goto static const extern volatile register inline restrict true false NULL".split(" "));
-        var TY = new Set("int char float double void long short unsigned signed bool _Bool size_t FILE int8_t int16_t int32_t int64_t uint8_t uint16_t uint32_t uint64_t intmax_t uintmax_t ptrdiff_t ssize_t".split(" "));
+        var KW = new Set("if else for while do return break continue switch case default sizeof typedef struct union enum goto static const extern volatile register inline restrict auto true false NULL".split(" "));
+        var TY = new Set("int char float double void long short unsigned signed bool _Bool size_t FILE int8_t int16_t int32_t int64_t uint8_t uint16_t uint32_t uint64_t intmax_t uintmax_t intptr_t uintptr_t ptrdiff_t ssize_t va_list time_t clock_t".split(" "));
         var RE = /(\/\/[^\n]*)|(\/\*[\s\S]*?(?:\*\/|(?![\s\S])))|("(?:[^"\\\n]|\\[\s\S])*"?)|('(?:[^'\\\n]|\\[\s\S])*'?)|(^[ \t]*#(?:[^\n\\]|\\[\s\S])*)|(\b(?:0[xX][0-9a-fA-F]+|\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)[uUlLfF]*|\.\d+(?:[eE][+-]?\d+)?[fFlL]?)|([A-Za-z_]\w*)/gm;
         function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
         function span(c, s) { return '<span class="' + c + '">' + esc(s) + "</span>"; }
@@ -2336,18 +2515,19 @@ self.onmessage = function (ev) {
         }
 
         /* ---------- editor ---------- */
-        var lineCount = 0, errLine = 0, errAt = null;
+        var lineCount = 0, errLine = 0, errAt = null, curLine = 1, inReplace = false, hlCount = 0;
         function renderGutter() {
           var h = "";
-          for (var i = 1; i <= lineCount; i++) h += i === errLine ? '<div class="is-err">' + i + "</div>" : "<div>" + i + "</div>";
+          for (var i = 1; i <= lineCount; i++) h += "<div" + (i === errLine ? ' class="is-err"' : i === curLine ? ' class="is-cur"' : "") + ">" + i + "</div>";
           gutter.innerHTML = h;
         }
         function update() {
           var v = ta.value;
           hl.innerHTML = highlight(v) + "\n";
+          hlCount++;
           var n = 1;
           for (var i = 0; i < v.length; i++) if (v.charCodeAt(i) === 10) n++;
-          if (n !== lineCount) { lineCount = n; renderGutter(); }
+          if (n !== lineCount) { lineCount = n; if (curLine > n) curLine = n; renderGutter(); }
           sync();
           updatePos();
         }
@@ -2357,38 +2537,130 @@ self.onmessage = function (ev) {
           gutter.style.transform = "translateY(" + -y + "px)";
         }
         function updatePos() {
-          var p = ta.selectionStart, before = ta.value.slice(0, p);
-          var line = before.split("\n").length, col = p - before.lastIndexOf("\n");
-          posEl.textContent = "第 " + line + " 行，第 " + col + " 列";
+          var p = ta.selectionStart, v = ta.value, line = 1, ls = 0;
+          for (var i = 0; i < p; i++) if (v.charCodeAt(i) === 10) { line++; ls = i + 1; }
+          posEl.textContent = "第 " + line + " 行，第 " + (p - ls + 1) + " 列";
+          if (line !== curLine) {
+            var g = gutter.children;
+            if (g[curLine - 1] && curLine !== errLine) g[curLine - 1].className = "";
+            curLine = line;
+            if (g[line - 1] && line !== errLine) g[line - 1].className = "is-cur";
+          }
+          curEl.style.transform = "translateY(" + (PADY + (curLine - 1) * LH) + "px)";
         }
         function clearErr() { errAt = null; if (errLine) { errLine = 0; renderGutter(); } }
 
-        // Replace [start,end) with text, keeping native undo where the browser allows it.
+        // Replace [start,end) with text, keeping native undo where the browser allows it. Rebuilds the highlight once.
         function replace(start, end, text, selA, selB) {
-          ta.focus();
+          if (document.activeElement !== ta) ta.focus();
           ta.setSelectionRange(start, end);
           var ok = false;
+          inReplace = true;
           try { ok = text ? document.execCommand("insertText", false, text) : (start === end || document.execCommand("delete")); } catch (e) { ok = false; }
           if (!ok) ta.setRangeText(text, start, end, "end");
+          inReplace = false;
           ta.setSelectionRange(selA, selB == null ? selA : selB);
+          clearErr();
           update();
+          afterEdit();
         }
         function lineStart(v, p) { return v.lastIndexOf("\n", p - 1) + 1; }
+        // What the caret sits in: code, a string/char literal, or a comment (best effort, for pairing and completion).
+        function ctxAt(v, a) {
+          var bs = v.lastIndexOf("/*", a - 2);
+          if (bs >= 0) { var be = v.indexOf("*/", bs + 2); if (be < 0 || be + 2 > a) { var lsb = lineStart(v, bs); if (v.slice(lsb, bs).indexOf("//") < 0) return "block"; } }
+          var ls = lineStart(v, a), q = null;
+          for (var i = ls; i < a; i++) {
+            var c = v[i];
+            if (q) { if (c === "\\") { i++; continue; } if (c === q) q = null; }
+            else if (c === '"' || c === "'") q = c;
+            else if (c === "/" && v[i + 1] === "/") return "line";
+          }
+          return q === '"' ? "str" : q === "'" ? "chr" : "code";
+        }
 
-        ta.addEventListener("input", function () { clearErr(); update(); });
-        ta.addEventListener("scroll", sync);
-        ta.addEventListener("keyup", updatePos);
-        ta.addEventListener("click", updatePos);
+        function newline(a, b) {
+          var v = ta.value, s0 = lineStart(v, a);
+          var indent = /^[ \t]*/.exec(v.slice(s0, a))[0];
+          var prev = v.slice(s0, a).replace(/\s+$/, "");
+          var lastc = prev.slice(-1), closer = { "{": "}", "(": ")", "[": "]" }[lastc];
+          var nextCh = v.slice(b).replace(/^[ \t]*/, "")[0];
+          var split = !!closer && a === b && nextCh === closer;
+          var inner = indent + (lastc === "{" || split ? IND : "");
+          if (split) replace(a, b, "\n" + inner + "\n" + indent, a + 1 + inner.length);
+          else replace(a, b, "\n" + inner, a + 1 + inner.length);
+        }
+        var PAIRS = { "(": ")", "[": "]", "{": "}", '"': '"', "'": "'" };
+        // Typing helpers shared by keyboards that report keys and phone keyboards that only send beforeinput.
+        function typed(d, a, b) {
+          var v = ta.value, next = v.charAt(b), prev = v.charAt(a - 1), isQ = d === '"' || d === "'";
+          var where = ctxAt(v, a);
+          if (a === b && (d === ")" || d === "]" || d === "}" || isQ) && next === d && prev !== "\\") {
+            if (!isQ || where === (d === '"' ? "str" : "chr")) { ta.setSelectionRange(a + 1, a + 1); updatePos(); acClose(); return true; }
+          }
+          if (d === "}" && a === b) {
+            var s1 = lineStart(v, a), head = v.slice(s1, a);
+            if (head.length && /^[ \t]+$/.test(head)) { var nh = head.replace(/( {1,4}|\t)$/, ""); replace(s1, a, nh + "}", s1 + nh.length + 1); return true; }
+            return false;
+          }
+          if (!PAIRS[d]) return false;
+          if (a !== b) {
+            if (v.slice(a, b).indexOf("\n") >= 0 && d !== "{") return false;
+            replace(a, b, d + v.slice(a, b) + PAIRS[d], a + 1, b + 1);
+            return true;
+          }
+          if (where !== "code") return false;
+          if (isQ && (/\w/.test(prev) || prev === "\\")) return false;
+          if (next && !/[\s)\]};,]/.test(next)) return false;
+          replace(a, b, d + PAIRS[d], a + 1);
+          return true;
+        }
+
+        ta.addEventListener("input", function (e) {
+          if (inReplace) return;
+          clearErr();
+          update();
+          var t = e && e.inputType || "insertText";
+          if (/^insert(Text|CompositionText|ReplacementText)$/.test(t)) acUpdate(false);
+          else if (/^delete/.test(t) && ac.open) acUpdate(false);
+          else acClose();
+          afterEdit();
+        });
+        ta.addEventListener("beforeinput", function (e) {
+          if (e.isComposing || inReplace) return;
+          var a = ta.selectionStart, b = ta.selectionEnd, v = ta.value;
+          if (e.inputType === "insertLineBreak" || e.inputType === "insertParagraph") { e.preventDefault(); acClose(); newline(a, b); return; }
+          if (e.inputType === "deleteContentBackward" && a === b && a > 0) {
+            var o = v.charAt(a - 1);
+            if (PAIRS[o] && v.charAt(a) === PAIRS[o]) { e.preventDefault(); replace(a - 1, a + 1, "", a - 1); if (ac.open) acUpdate(false); return; }
+            return;
+          }
+          if (e.inputType === "insertText" && e.data && e.data.length === 1 && typed(e.data, a, b)) e.preventDefault();
+        });
+        ta.addEventListener("scroll", function () { sync(); if (ac.open) acPlace(); });
+        ta.addEventListener("click", function () { updatePos(); acClose(); });
         ta.addEventListener("select", updatePos);
+        ta.addEventListener("blur", function () { setTimeout(function () { if (document.activeElement !== ta) acClose(); }, 0); });
+        var selRaf = 0;
+        document.addEventListener("selectionchange", function () {
+          if (document.activeElement !== ta || selRaf) return;
+          selRaf = requestAnimationFrame(function () {
+            selRaf = 0; updatePos();
+            if (ac.open && ac.ctx && (ta.selectionStart !== ta.selectionEnd || ta.selectionStart < ac.ctx.start || ta.selectionStart > ta.value.length)) acClose();
+          });
+        });
         // If the highlight layer is ever scrolled (e.g. by find-in-page), carry the textarea with it.
         hl.addEventListener("scroll", function () { ta.scrollTop = hl.scrollTop; ta.scrollLeft = hl.scrollLeft; });
 
         var escaped = false;
         ta.addEventListener("keydown", function (e) {
+          if (ac.open && acKey(e)) { e.preventDefault(); e.stopPropagation(); return; }
           if ((e.ctrlKey || e.metaKey) && e.key === "Enter") return; // handled globally
+          if (e.ctrlKey && !e.metaKey && (e.code === "Space" || e.key === " ")) { e.preventDefault(); acUpdate(true); return; }
           if (e.key === "Escape") { escaped = true; return; }
           if (e.isComposing || e.keyCode === 229) return;
           var v = ta.value, a = ta.selectionStart, b = ta.selectionEnd;
+          if (/^(ArrowLeft|ArrowRight|Home|End|PageUp|PageDown)$/.test(e.key)) acClose();
 
           if (e.key === "Tab" && !e.ctrlKey && !e.altKey && !e.metaKey) {
             if (escaped) { escaped = false; return; } // let focus move on
@@ -2402,10 +2674,8 @@ self.onmessage = function (ev) {
             var firstDelta = 0, total = 0;
             var res = lines.map(function (l, i) {
               var d;
-              if (e.shiftKey) {
-                var mm = /^( {1,4}|\t)/.exec(l); d = mm ? -mm[0].length : 0;
-                l = l.slice(-d);
-              } else { d = 4; l = IND + l; }
+              if (e.shiftKey) { var mm = /^( {1,4}|\t)/.exec(l); d = mm ? -mm[0].length : 0; l = l.slice(-d); }
+              else { d = 4; l = IND + l; }
               if (i === 0) firstDelta = d;
               total += d;
               return l;
@@ -2416,32 +2686,7 @@ self.onmessage = function (ev) {
             return;
           }
           escaped = false;
-
-          if (e.key === "Enter" && !e.shiftKey && !e.altKey) {
-            e.preventDefault();
-            var s0 = lineStart(v, a);
-            var indent = /^[ \t]*/.exec(v.slice(s0, a))[0];
-            var prev = v.slice(s0, a).replace(/\s+$/, "");
-            var opens = prev.slice(-1) === "{";
-            var inner = indent + (opens ? IND : "");
-            var nextCh = v.slice(b).replace(/^[ \t]*/, "")[0];
-            if (opens && nextCh === "}" && a === b) {
-              var t = "\n" + inner + "\n" + indent;
-              replace(a, b, t, a + 1 + inner.length);
-            } else {
-              replace(a, b, "\n" + inner, a + 1 + inner.length);
-            }
-            return;
-          }
-
-          if (e.key === "}" && a === b && !e.ctrlKey && !e.metaKey && !e.altKey) {
-            var s1 = lineStart(v, a), head = v.slice(s1, a);
-            if (head.length && /^[ \t]+$/.test(head)) {
-              e.preventDefault();
-              var nh = head.replace(/( {1,4}|\t)$/, "");
-              replace(s1, a, nh + "}", s1 + nh.length + 1);
-            }
-          }
+          if (e.key === "Enter" && !e.shiftKey && !e.altKey) { e.preventDefault(); newline(a, b); return; }
         });
 
         function setCode(code) {
@@ -2450,6 +2695,7 @@ self.onmessage = function (ev) {
           ta.setSelectionRange(0, 0);
           clearErr();
           update();
+          afterEdit();
         }
 
         /* ---------- files (multi-file programs) ---------- */
@@ -2467,6 +2713,7 @@ self.onmessage = function (ev) {
         function showFile(i) {
           var f = files[i];
           active = i;
+          acClose();
           ta.value = f.code;
           if (f.sel) ta.setSelectionRange(f.sel[0], f.sel[1]); else ta.setSelectionRange(0, 0);
           ta.scrollTop = f.scroll ? f.scroll[0] : 0; ta.scrollLeft = f.scroll ? f.scroll[1] : 0;
@@ -2474,10 +2721,12 @@ self.onmessage = function (ev) {
           lineCount = 0;
           update();
           renderTabs();
+          afterEdit();
         }
         function switchTo(i) {
           if (!files[i]) return;
           if (i !== active) { saveActive(); showFile(i); }
+          if (isPhone()) setView("code");
           ta.focus();
         }
         function setFiles(mainCode, extra) {
@@ -2491,6 +2740,7 @@ self.onmessage = function (ev) {
           for (var i = 1; i < files.length; i++) m[files[i].name] = files[i].code;
           return m;
         }
+        var pendingDelete = -1, pendingTimer = 0;
         function renderTabs() {
           tabsEl.textContent = "";
           files.forEach(function (f, i) {
@@ -2501,8 +2751,11 @@ self.onmessage = function (ev) {
             b.setAttribute("role", "tab");
             b.setAttribute("aria-selected", i === active ? "true" : "false");
             b.textContent = f.name;
-            b.title = i === 0 ? "主文件（不能重命名或删除）" : "双击（或按 F2）重命名";
-            b.addEventListener("click", function () { switchTo(i); });
+            b.title = i === 0 ? "主文件（不能重命名或删除）" : "双击（或按 F2）重命名；触屏上再点一次当前标签重命名";
+            b.addEventListener("click", function () {
+              if (i > 0 && i === active && mqCoarse.matches) { startRename(i); return; }
+              switchTo(i);
+            });
             if (i > 0) {
               b.addEventListener("dblclick", function (e) { e.preventDefault(); startRename(i); });
               b.addEventListener("keydown", function (e) { if (e.key === "F2") { e.preventDefault(); startRename(i); } });
@@ -2510,15 +2763,17 @@ self.onmessage = function (ev) {
             tab.appendChild(b);
             if (i > 0) {
               var x = document.createElement("button");
-              x.type = "button"; x.className = "x-tab__x"; x.textContent = "×";
-              x.title = "删除 " + f.name; x.setAttribute("aria-label", "删除 " + f.name);
+              x.type = "button"; x.className = "x-tab__x" + (pendingDelete === i ? " is-confirm" : "");
+              x.textContent = pendingDelete === i ? "删除？" : "×";
+              x.title = pendingDelete === i ? "再点一次确认删除 " + f.name : "删除 " + f.name;
+              x.setAttribute("aria-label", x.title);
               x.addEventListener("click", function () { removeFile(i); });
               tab.appendChild(x);
             }
             tabsEl.appendChild(tab);
           });
           var cur = tabsEl.children[active];
-          if (cur && cur.scrollIntoView) cur.scrollIntoView({ block: "nearest", inline: "nearest" });
+          if (cur && cur.scrollIntoView && tabsEl.scrollWidth > tabsEl.clientWidth) cur.scrollIntoView({ block: "nearest", inline: "nearest" });
         }
         function checkName(name, self) {
           if (!name) return "文件名不能为空";
@@ -2535,7 +2790,7 @@ self.onmessage = function (ev) {
           var inp = document.createElement("input");
           inp.className = "x-tab__input"; inp.value = old;
           inp.setAttribute("aria-label", "重命名 " + old + "（回车确认，Esc 取消）");
-          inp.spellcheck = false;
+          inp.spellcheck = false; inp.autocapitalize = "off"; inp.setAttribute("autocorrect", "off");
           tab.replaceChild(inp, nameBtn);
           inp.focus();
           var dot = old.lastIndexOf(".");
@@ -2556,6 +2811,7 @@ self.onmessage = function (ev) {
                   if (errAt && errAt.file === old) errAt.file = nn;
                   if (i === active) { showFile(i); }
                   setStatus("", ["已将 " + old + " 重命名为 " + nn]);
+                  afterEdit();
                 }
               }
             }
@@ -2577,11 +2833,23 @@ self.onmessage = function (ev) {
           showFile(files.length - 1);
           startRename(files.length - 1);
         }
+        // No confirm(): it is blocked in sandboxed frames. A non-empty file asks for a second tap instead.
         function removeFile(i) {
           if (i <= 0 || !files[i]) return;
           if (i === active) saveActive();
           var f = files[i];
-          if (f.code.trim() && f.code !== headerTemplate(f.name) && !window.confirm("删除 " + f.name + "？文件内容会丢失。")) return;
+          var hasContent = f.code.trim() && f.code !== headerTemplate(f.name);
+          if (hasContent && pendingDelete !== i) {
+            pendingDelete = i;
+            clearTimeout(pendingTimer);
+            pendingTimer = setTimeout(function () { pendingDelete = -1; renderTabs(); }, 4000);
+            renderTabs();
+            setStatus("", ["再点一次「删除？」确认删除 " + f.name + "（内容会丢失）"]);
+            var xb = tabsEl.children[i] && tabsEl.children[i].querySelector(".x-tab__x");
+            if (xb) xb.focus();
+            return;
+          }
+          pendingDelete = -1; clearTimeout(pendingTimer);
           saveActive();
           files.splice(i, 1);
           if (errAt && errAt.file === f.name) errAt = null;
@@ -2591,12 +2859,13 @@ self.onmessage = function (ev) {
         }
 
         function goToLine(n) {
+          if (isPhone()) setView("code");
           var v = ta.value, p = 0;
           for (var i = 1; i < n; i++) { var q = v.indexOf("\n", p); if (q < 0) break; p = q + 1; }
           ta.focus();
           ta.setSelectionRange(p, p);
-          var top = 12 + (n - 1) * LH;
-          if (top < ta.scrollTop || top + LH > ta.scrollTop + ta.clientHeight - 12) ta.scrollTop = Math.max(0, top - ta.clientHeight / 2 + LH);
+          var top = PADY + (n - 1) * LH;
+          if (top < ta.scrollTop || top + LH > ta.scrollTop + ta.clientHeight - PADY) ta.scrollTop = Math.max(0, top - ta.clientHeight / 2 + LH);
           ta.scrollLeft = 0;
           sync();
           updatePos();
@@ -2604,8 +2873,83 @@ self.onmessage = function (ev) {
           flash.classList.remove("is-on");
           void flash.offsetWidth;
           flash.classList.add("is-on");
-          if (window.matchMedia("(max-width: 899px)").matches) ta.closest(".x-panel").scrollIntoView({ block: "nearest", behavior: "smooth" });
         }
+
+        /* ---------- phone views: 代码 | 输入 | 输出 ---------- */
+        var view = "code";
+        function setView(v) {
+          view = v;
+          app.setAttribute("data-view", v);
+          Array.prototype.forEach.call(segEl.querySelectorAll("button"), function (b) {
+            var on = b.getAttribute("data-v") === v;
+            b.setAttribute("aria-selected", on ? "true" : "false");
+            b.tabIndex = on ? 0 : -1;
+            if (on) b.classList.remove("has-new", "has-err");
+          });
+          acClose();
+        }
+        segEl.addEventListener("click", function (e) {
+          var b = e.target.closest ? e.target.closest("button[data-v]") : null;
+          if (!b) return;
+          setView(b.getAttribute("data-v"));
+        });
+        segEl.addEventListener("keydown", function (e) {
+          if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+          var order = ["code", "input", "output"], k = order.indexOf(view) + (e.key === "ArrowRight" ? 1 : -1);
+          k = (k + 3) % 3; setView(order[k]);
+          segEl.querySelector('[data-v="' + order[k] + '"]').focus();
+          e.preventDefault();
+        });
+        function markOutput(err) {
+          if (view === "output" || !isPhone()) return;
+          var b = segEl.querySelector('[data-v="output"]');
+          b.classList.add("has-new"); if (err) b.classList.add("has-err");
+        }
+
+        /* ---------- 更多 menu (narrow screens) ---------- */
+        function setMenu(open) {
+          moreEl.classList.toggle("is-open", open);
+          moreBtn.setAttribute("aria-expanded", open ? "true" : "false");
+        }
+        moreBtn.addEventListener("click", function (e) { e.stopPropagation(); setMenu(!moreEl.classList.contains("is-open")); if (moreEl.classList.contains("is-open") && e.detail === 0) sel.focus(); });
+        document.addEventListener("click", function (e) { if (moreEl.classList.contains("is-open") && !moreEl.contains(e.target)) setMenu(false); });
+        moreEl.addEventListener("keydown", function (e) { if (e.key === "Escape" && moreEl.classList.contains("is-open")) { setMenu(false); moreBtn.focus(); } });
+
+        /* ---------- desktop splitter ---------- */
+        var split = 0.6;
+        function setSplit(f, save) {
+          var w = workEl.clientWidth || 1000, minF = Math.min(0.45, 300 / w);
+          split = Math.max(Math.max(0.25, minF), Math.min(Math.min(0.8, 1 - minF), f));
+          workEl.style.setProperty("--x-l", Math.round(split * 1000) + "fr");
+          workEl.style.setProperty("--x-r", Math.round((1 - split) * 1000) + "fr");
+          splitEl.setAttribute("aria-valuenow", String(Math.round(split * 100)));
+          if (save) sset("cplay:split", String(split));
+          sync();
+        }
+        (function () {
+          var dragging = false;
+          splitEl.addEventListener("pointerdown", function (e) {
+            if (e.button !== 0) return;
+            dragging = true; splitEl.classList.add("is-drag"); workEl.classList.add("is-drag");
+            try { splitEl.setPointerCapture(e.pointerId); } catch (er) {}
+            e.preventDefault();
+          });
+          splitEl.addEventListener("pointermove", function (e) {
+            if (!dragging) return;
+            var r = workEl.getBoundingClientRect();
+            setSplit((e.clientX - r.left - 6) / (r.width - 12), false);
+          });
+          function end() { if (!dragging) return; dragging = false; splitEl.classList.remove("is-drag"); workEl.classList.remove("is-drag"); sset("cplay:split", String(split)); }
+          splitEl.addEventListener("pointerup", end);
+          splitEl.addEventListener("pointercancel", end);
+          splitEl.addEventListener("dblclick", function () { setSplit(0.6, true); });
+          splitEl.addEventListener("keydown", function (e) {
+            var d = e.key === "ArrowLeft" ? -0.03 : e.key === "ArrowRight" ? 0.03 : 0;
+            if (e.key === "Home") { setSplit(0.25, true); e.preventDefault(); }
+            else if (e.key === "End") { setSplit(0.8, true); e.preventDefault(); }
+            else if (d) { setSplit(split + d, true); e.preventDefault(); }
+          });
+        })();
 
         /* ---------- console ---------- */
         var CAP = 1000000, segs = [], total = 0, truncated = false, needFull = false, pending = [], raf = 0;
@@ -2669,10 +3013,13 @@ self.onmessage = function (ev) {
         var KIND = { compile: "编译错误", runtime: "运行时错误" };
         function showResult(exitCode, error, ms) {
           if (!error) {
-            setStatus("ok", ["程序已退出，返回值 " + exitCode + " · 用时 " + ms + " ms"]);
+            var dim = document.createElement("span"); dim.className = "x-dim"; dim.textContent = "· 用时 " + ms + " ms";
+            setStatus(exitCode === 0 ? "ok" : "err", ["程序已退出，返回值 " + exitCode, dim]);
+            markOutput(exitCode !== 0);
             return;
           }
           var msg = String(error.message || "未知错误");
+          markOutput(true);
           if (error.kind === "compile" || error.kind === "runtime") {
             var label = KIND[error.kind], line = error.line | 0;
             var efile = error.file || "main.c";
@@ -2703,6 +3050,7 @@ self.onmessage = function (ev) {
         function setRunning(on) {
           running = on;
           stopBtn.disabled = !on;
+          app.classList.toggle("is-running", on);
           if (on) setStatus("run", ["运行中…"]);
         }
         function killWorker() {
@@ -2733,11 +3081,13 @@ self.onmessage = function (ev) {
         function run() {
           killWorker();
           runToken++;
+          acClose();
           saveActive();
           var token = runToken, src = files[0].code, input = stdinEl.value, extra = extraFiles();
           clearOut();
           clearErr();
           setRunning(true);
+          if (isPhone()) setView("output");
           var w = null;
           try {
             if (!workerURL) workerURL = URL.createObjectURL(new Blob([$("worker-src").textContent], { type: "text/javascript" }));
@@ -2777,23 +3127,542 @@ self.onmessage = function (ev) {
           setStatus("", ["已停止"]);
         }
 
+        /* ================= code completion ================= */
+        var C_KW = "auto break case const continue default do else enum extern for goto if inline register restrict return sizeof static struct switch typedef union volatile while".split(" ");
+        var SNIP_KW = { "for": 1, "if": 1, "while": 1, "switch": 1, "do": 1 }; // these come as snippets instead
+        var C_TY = "void char short int long float double signed unsigned bool _Bool size_t ssize_t ptrdiff_t FILE int8_t int16_t int32_t int64_t uint8_t uint16_t uint32_t uint64_t intptr_t uintptr_t intmax_t uintmax_t va_list time_t clock_t".split(" ");
+        var C_CONST = [
+          ["NULL", "空指针"], ["true", "stdbool.h：真"], ["false", "stdbool.h：假"], ["EOF", "stdio.h：文件结束（-1）"],
+          ["stdin", "标准输入流"], ["stdout", "标准输出流"], ["stderr", "标准错误流（输出显示为红色）"],
+          ["RAND_MAX", "rand() 的最大值"], ["INT_MAX", "limits.h：int 最大值"], ["INT_MIN", "limits.h：int 最小值"], ["UINT_MAX", "limits.h：unsigned 最大值"],
+          ["LLONG_MAX", "limits.h：long long 最大值"], ["CHAR_MAX", "limits.h：char 最大值"], ["SIZE_MAX", "stdint.h：size_t 最大值"],
+          ["DBL_MAX", "float.h：double 最大值"], ["FLT_MAX", "float.h：float 最大值"], ["EXIT_SUCCESS", "stdlib.h：成功退出码 0"], ["EXIT_FAILURE", "stdlib.h：失败退出码 1"],
+          ["M_PI", "math.h：圆周率 π"], ["M_E", "math.h：自然常数 e"], ["INFINITY", "math.h：正无穷"], ["NAN", "math.h：非数"], ["CLOCKS_PER_SEC", "time.h：clock() 每秒的计数"]
+        ];
+        // [name, signature, description, header, insert template ($0 = caret)]
+        var C_FN = [
+          ["printf", "int printf(const char *fmt, ...)", "按格式输出到屏幕", "stdio.h", 'printf("%d\\n", $0)'],
+          ["scanf", "int scanf(const char *fmt, ...)", "按格式从输入读取，返回成功读取的个数", "stdio.h", 'scanf("%d", &$0)'],
+          ["puts", "int puts(const char *s)", "输出字符串并换行", "stdio.h"],
+          ["putchar", "int putchar(int c)", "输出一个字符", "stdio.h"],
+          ["getchar", "int getchar(void)", "读取一个字符，读到末尾返回 EOF", "stdio.h"],
+          ["fgets", "char *fgets(char *s, int n, FILE *fp)", "读取一行（最多 n-1 个字符），常用 fgets(buf, sizeof buf, stdin)", "stdio.h", "fgets($0, sizeof , stdin)"],
+          ["sprintf", "int sprintf(char *buf, const char *fmt, ...)", "按格式写入字符串", "stdio.h"],
+          ["snprintf", "int snprintf(char *buf, size_t n, const char *fmt, ...)", "按格式写入字符串，最多写 n 个字节", "stdio.h"],
+          ["sscanf", "int sscanf(const char *s, const char *fmt, ...)", "从字符串按格式读取", "stdio.h"],
+          ["fprintf", "int fprintf(FILE *fp, const char *fmt, ...)", "按格式输出到流，如 stderr", "stdio.h", 'fprintf(stderr, "$0\\n")'],
+          ["fputs", "int fputs(const char *s, FILE *fp)", "输出字符串（不自动换行）", "stdio.h"],
+          ["perror", "void perror(const char *s)", "输出错误信息到 stderr", "stdio.h"],
+          ["malloc", "void *malloc(size_t size)", "分配 size 字节的堆内存，用完要 free", "stdlib.h", "malloc(sizeof($0))"],
+          ["calloc", "void *calloc(size_t n, size_t size)", "分配 n 个元素并清零", "stdlib.h"],
+          ["realloc", "void *realloc(void *p, size_t size)", "调整已分配内存的大小", "stdlib.h"],
+          ["free", "void free(void *p)", "释放 malloc/calloc/realloc 分配的内存", "stdlib.h"],
+          ["exit", "void exit(int status)", "立即结束程序", "stdlib.h"],
+          ["abs", "int abs(int x)", "整数绝对值", "stdlib.h"],
+          ["atoi", "int atoi(const char *s)", "字符串转 int", "stdlib.h"],
+          ["atof", "double atof(const char *s)", "字符串转 double", "stdlib.h"],
+          ["strtol", "long strtol(const char *s, char **end, int base)", "按进制把字符串转为 long", "stdlib.h"],
+          ["strtod", "double strtod(const char *s, char **end)", "字符串转 double", "stdlib.h"],
+          ["rand", "int rand(void)", "伪随机整数 0 ~ RAND_MAX", "stdlib.h"],
+          ["srand", "void srand(unsigned seed)", "设置随机数种子，常用 srand(time(NULL))", "stdlib.h"],
+          ["qsort", "void qsort(void *base, size_t n, size_t size, int (*cmp)(const void *, const void *))", "快速排序，需要提供比较函数", "stdlib.h"],
+          ["bsearch", "void *bsearch(const void *key, const void *base, size_t n, size_t size, int (*cmp)(const void *, const void *))", "在有序数组中二分查找", "stdlib.h"],
+          ["strlen", "size_t strlen(const char *s)", "字符串长度（不含 '\\0'）", "string.h"],
+          ["strcpy", "char *strcpy(char *dst, const char *src)", "复制字符串", "string.h"],
+          ["strncpy", "char *strncpy(char *dst, const char *src, size_t n)", "最多复制 n 个字符", "string.h"],
+          ["strcat", "char *strcat(char *dst, const char *src)", "把 src 拼接到 dst 末尾", "string.h"],
+          ["strncat", "char *strncat(char *dst, const char *src, size_t n)", "最多拼接 n 个字符", "string.h"],
+          ["strcmp", "int strcmp(const char *a, const char *b)", "比较字符串：相等返回 0", "string.h"],
+          ["strncmp", "int strncmp(const char *a, const char *b, size_t n)", "比较前 n 个字符", "string.h"],
+          ["strchr", "char *strchr(const char *s, int c)", "查找字符第一次出现的位置", "string.h"],
+          ["strrchr", "char *strrchr(const char *s, int c)", "查找字符最后一次出现的位置", "string.h"],
+          ["strstr", "char *strstr(const char *s, const char *sub)", "查找子串", "string.h"],
+          ["strtok", "char *strtok(char *s, const char *delim)", "按分隔符切分字符串", "string.h"],
+          ["strdup", "char *strdup(const char *s)", "复制字符串到新分配的内存", "string.h"],
+          ["memset", "void *memset(void *p, int c, size_t n)", "把 n 个字节设为 c，常用于清零", "string.h", "memset($0, 0, sizeof )"],
+          ["memcpy", "void *memcpy(void *dst, const void *src, size_t n)", "复制 n 个字节（区域不能重叠）", "string.h"],
+          ["memmove", "void *memmove(void *dst, const void *src, size_t n)", "复制 n 个字节（允许重叠）", "string.h"],
+          ["memcmp", "int memcmp(const void *a, const void *b, size_t n)", "比较 n 个字节", "string.h"],
+          ["isdigit", "int isdigit(int c)", "是否为数字字符", "ctype.h"],
+          ["isalpha", "int isalpha(int c)", "是否为字母", "ctype.h"],
+          ["isalnum", "int isalnum(int c)", "是否为字母或数字", "ctype.h"],
+          ["isspace", "int isspace(int c)", "是否为空白字符", "ctype.h"],
+          ["isupper", "int isupper(int c)", "是否为大写字母", "ctype.h"],
+          ["islower", "int islower(int c)", "是否为小写字母", "ctype.h"],
+          ["toupper", "int toupper(int c)", "转为大写", "ctype.h"],
+          ["tolower", "int tolower(int c)", "转为小写", "ctype.h"],
+          ["sqrt", "double sqrt(double x)", "平方根", "math.h"],
+          ["pow", "double pow(double x, double y)", "x 的 y 次方", "math.h"],
+          ["fabs", "double fabs(double x)", "浮点数绝对值", "math.h"],
+          ["floor", "double floor(double x)", "向下取整", "math.h"],
+          ["ceil", "double ceil(double x)", "向上取整", "math.h"],
+          ["round", "double round(double x)", "四舍五入", "math.h"],
+          ["sin", "double sin(double x)", "正弦（弧度）", "math.h"],
+          ["cos", "double cos(double x)", "余弦（弧度）", "math.h"],
+          ["tan", "double tan(double x)", "正切（弧度）", "math.h"],
+          ["atan2", "double atan2(double y, double x)", "y/x 的反正切，结果在 -π ~ π", "math.h"],
+          ["exp", "double exp(double x)", "e 的 x 次方", "math.h"],
+          ["log", "double log(double x)", "自然对数", "math.h"],
+          ["log10", "double log10(double x)", "以 10 为底的对数", "math.h"],
+          ["fmod", "double fmod(double x, double y)", "浮点取余", "math.h"],
+          ["hypot", "double hypot(double x, double y)", "直角三角形斜边长", "math.h"],
+          ["fmax", "double fmax(double x, double y)", "较大值", "math.h"],
+          ["fmin", "double fmin(double x, double y)", "较小值", "math.h"],
+          ["time", "time_t time(time_t *t)", "当前时间（秒），常用 time(NULL)", "time.h", "time(NULL)$0"],
+          ["clock", "clock_t clock(void)", "程序已用的处理器时间，除以 CLOCKS_PER_SEC 得秒", "time.h"],
+          ["assert", "void assert(int cond)", "条件为假时报错并停止", "assert.h"],
+          ["va_start", "void va_start(va_list ap, last)", "开始读取可变参数", "stdarg.h"],
+          ["va_arg", "type va_arg(va_list ap, type)", "读取下一个可变参数", "stdarg.h"],
+          ["va_end", "void va_end(va_list ap)", "结束读取可变参数", "stdarg.h"]
+        ];
+        var C_HEADERS = [
+          ["stdio.h", "输入输出：printf、scanf、getchar、fgets…"], ["stdlib.h", "内存分配、随机数、qsort、atoi…"], ["string.h", "字符串与内存：strlen、strcpy、memset…"],
+          ["math.h", "数学函数：sqrt、pow、sin…"], ["ctype.h", "字符分类：isdigit、toupper…"], ["stdbool.h", "bool / true / false"],
+          ["stdint.h", "定长整数：int32_t、uint64_t…"], ["stddef.h", "size_t、NULL、offsetof"], ["limits.h", "INT_MAX 等整数范围"], ["float.h", "DBL_MAX 等浮点范围"],
+          ["time.h", "time、clock"], ["stdarg.h", "可变参数 va_list"], ["assert.h", "assert 断言"], ["inttypes.h", "PRId64 等格式宏"], ["errno.h", "错误码 errno"],
+          ["iso646.h", "and / or / not 等替代写法"], ["strings.h", "strcasecmp 等"], ["tgmath.h", "泛型数学"], ["unistd.h", "sleep 等（部分支持）"]
+        ];
+        var C_SNIP = [
+          ["for", "for (int i = 0; i < $0; i++) {\n    \n}", "for 循环", "for (int i = 0; i < n; i++) { … }"],
+          ["if", "if ($0) {\n    \n}", "if 语句", "if (条件) { … }"],
+          ["else", "else {\n    $0\n}", "else 分支", "else { … }"],
+          ["while", "while ($0) {\n    \n}", "while 循环", "while (条件) { … }"],
+          ["do", "do {\n    $0\n} while ();", "do-while 循环", "do { … } while (条件);"],
+          ["switch", "switch ($0) {\ncase 1:\n    break;\ndefault:\n    break;\n}", "switch 语句", "switch (表达式) { case …: break; }"],
+          ["main", "int main(void) {\n    $0\n    return 0;\n}", "main 函数", "int main(void) { … return 0; }"],
+          ["struct", "struct $0 {\n    \n};", "结构体定义", "struct 名字 { 成员; };"],
+          ["typedef", "typedef struct {\n    $0\n} Name;", "typedef 结构体", "typedef struct { … } Name;"],
+          ["include", "#include <stdio.h>$0", "#include <stdio.h>", "引入标准输入输出头文件"],
+          ["define", "#define $0", "#define 宏", "定义宏"],
+          ["ifndef", "#ifndef $0\n#define \n\n#endif", "头文件保护", "#ifndef … #define … #endif"]
+        ];
+        var DIRECTIVES = "include define undef ifdef ifndef if elif else endif pragma error".split(" ");
+
+        /* --- identifier index (debounced, cached per file) --- */
+        var idxCache = {}, scanTimer = 0;
+        function stripCode(s) { // comments, strings, chars and # lines become spaces (same length, newlines kept)
+          return s.replace(/\/\/[^\n]*|\/\*[\s\S]*?(?:\*\/|$)|"(?:[^"\\\n]|\\[\s\S])*"?|'(?:[^'\\\n]|\\[\s\S])*'?|^[ \t]*#(?:[^\n\\]|\\[\s\S])*/gm, function (m) { return m.replace(/[^\n]/g, " "); });
+        }
+        function matchBrace(s, i) { // s[i] === "{" → index of the matching "}"
+          for (var d = 0, j = i; j < s.length; j++) { var c = s[j]; if (c === "{") d++; else if (c === "}" && --d === 0) return j; }
+          return s.length;
+        }
+        function parseFields(body) {
+          var flat = body, prev;
+          do { prev = flat; flat = flat.replace(/\{[^{}]*\}/g, " "); } while (flat !== prev);
+          var fields = [];
+          flat.split(";").forEach(function (st) {
+            st = st.replace(/:\s*\w+\s*$/, "").trim();
+            if (!st) return;
+            var fp = /\(\s*\*\s*([A-Za-z_]\w*)\s*\)\s*\(/.exec(st);
+            if (fp) { fields.push({ name: fp[1], type: st.replace(/\s+/g, " ") }); return; }
+            var parts = st.split(","), m = /^([\s\S]*?)([A-Za-z_]\w*)\s*((?:\[[^\]]*\]\s*)*)$/.exec(parts[0].trim());
+            if (!m || !m[1].trim()) return;
+            var type = m[1].replace(/\s+/g, " ").trim(), base = type.replace(/[\s*]+$/, "");
+            fields.push({ name: m[2], type: type + (m[3] ? "[]" : "") });
+            for (var k = 1; k < parts.length; k++) {
+              var mm = /^\s*(\**)\s*([A-Za-z_]\w*)\s*(\[)?/.exec(parts[k]);
+              if (mm) fields.push({ name: mm[2], type: base + (mm[1] ? " " + mm[1] : "") + (mm[3] ? "[]" : "") });
+            }
+          });
+          return fields;
+        }
+        function scanFile(code) {
+          var s = stripCode(code), r = { vars: [], funcs: [], macros: [], types: [], enums: [], structs: {}, typedefs: {} }, m, re;
+          var bodies = [];
+          // macros (from the raw text)
+          re = /^[ \t]*#[ \t]*define[ \t]+([A-Za-z_]\w*)(\([^)]*\))?[ \t]*(.*)$/gm;
+          while ((m = re.exec(code))) r.macros.push({ name: m[1], detail: (m[2] || "") + (m[3] ? " " + m[3].trim().slice(0, 40) : ""), pos: m.index });
+          // struct / union bodies and typedefs of them
+          re = /\b(typedef\s+)?(struct|union|enum)\s*([A-Za-z_]\w*)?\s*\{/g;
+          while ((m = re.exec(s))) {
+            var open = m.index + m[0].length - 1, close = matchBrace(s, open), body = s.slice(open + 1, close);
+            var key = m[3] ? m[2] + " " + m[3] : null;
+            if (m[2] === "enum") {
+              body.split(",").forEach(function (p) { var e = /^\s*([A-Za-z_]\w*)/.exec(p); if (e) r.enums.push({ name: e[1], detail: m[3] ? "enum " + m[3] : "enum" }); });
+            } else bodies.push([open, close]);
+            if (m[1]) {
+              var after = /^\s*\**\s*([A-Za-z_]\w*)/.exec(s.slice(close + 1, close + 200));
+              if (after) {
+                if (!key) key = m[2] + " <" + after[1] + ">";
+                r.typedefs[after[1]] = key;
+                r.types.push({ name: after[1], detail: "typedef " + (m[3] ? key : m[2]) });
+              }
+            }
+            if (key && m[2] !== "enum") r.structs[key] = parseFields(body);
+            if (m[3]) r.types.push({ name: m[3], detail: m[2] + " " + m[3], tag: true });
+            re.lastIndex = open + 1;
+          }
+          // simple typedefs: typedef unsigned int uint; typedef struct Node Node;
+          re = /\btypedef\s+([^;{}()]+?)\s*\b([A-Za-z_]\w*)\s*;/g;
+          while ((m = re.exec(s))) { r.typedefs[m[2]] = m[1].replace(/\s+/g, " "); r.types.push({ name: m[2], detail: "typedef " + m[1].replace(/\s+/g, " ") }); }
+          // declarations: variables, parameters and functions
+          var tnames = C_TY.concat(Object.keys(r.typedefs)).filter(function (t) { return !/^(unsigned|signed|long|short)$/.test(t); });
+          var DECL = new RegExp("\\b((?:struct|union|enum)\\s+[A-Za-z_]\\w*|" + tnames.join("|") + "|unsigned|signed|long|short)\\b((?:\\s|\\*|\\bconst\\b)*)\\b([A-Za-z_]\\w*)", "g");
+          var depth = 0, paren = 0, at = 0;
+          function advance(to) { for (; at < to; at++) { var c = s[at]; if (c === "{") depth++; else if (c === "}") depth--; else if (c === "(") paren++; else if (c === ")") paren = Math.max(0, paren - 1); } }
+          function inBody(p) { for (var i = 0; i < bodies.length; i++) if (p > bodies[i][0] && p < bodies[i][1]) return true; return false; }
+          while ((m = DECL.exec(s))) {
+            var name = m[3], type = (m[1] + " " + m[2]).replace(/\s+/g, " ").replace(/ \*/g, "*").replace(/\*/, " *").trim();
+            if (KW.has(name) || TY.has(name) || r.typedefs[name] || /^(unsigned|signed|long|short|int|char|double|float)$/.test(name)) { DECL.lastIndex = m.index + m[1].length; continue; }
+            var pos = m.index + m[0].length - name.length;
+            advance(m.index);
+            if (inBody(pos)) continue;
+            var rest = s.slice(pos + name.length), ws = /^\s*/.exec(rest)[0].length;
+            if (rest.charAt(ws) === "(") { // function prototype or definition
+              var j = pos + name.length + ws, d = 0;
+              for (; j < s.length; j++) { if (s[j] === "(") d++; else if (s[j] === ")" && --d === 0) break; }
+              var tail = /^\s*([{;])/.exec(s.slice(j + 1, j + 40));
+              if (tail && paren === 0 && depth === 0) {
+                var params = code.slice(pos + name.length + ws + 1, j).replace(/\s+/g, " ").trim();
+                r.funcs.push({ name: name, detail: type + " " + name + "(" + params + ")", ret: type, noargs: !params || params === "void", pos: pos });
+              }
+              continue;
+            }
+            var global = depth === 0 && paren === 0, arr = rest.charAt(ws) === "[";
+            r.vars.push({ name: name, type: type + (arr ? "[]" : ""), pos: pos, global: global, param: paren > 0 && depth === 0 });
+            if (paren > 0) continue;
+            // further declarators: int a = 1, *b, c[3];
+            var k = pos + name.length, dd = 0, base = m[1];
+            for (; k < s.length; k++) {
+              var ch = s[k];
+              if (ch === "(" || ch === "[" || ch === "{") dd++;
+              else if (ch === ")" || ch === "]" || ch === "}") { if (--dd < 0) break; }
+              else if (ch === ";" && dd === 0) break;
+              else if (ch === "," && dd === 0) {
+                var nx = /^\s*(\**)\s*([A-Za-z_]\w*)\s*(\[)?/.exec(s.slice(k + 1, k + 120));
+                if (nx && !KW.has(nx[2]) && !TY.has(nx[2])) r.vars.push({ name: nx[2], type: base + (nx[1] ? " " + nx[1] : "") + (nx[3] ? "[]" : ""), pos: k + 1 + nx.index + nx[0].indexOf(nx[2]), global: global });
+              }
+            }
+          }
+          // "Stack s;" / "Node *p = ..." where the type is a typedef from another tab
+          var seenPos = {}; r.vars.forEach(function (v) { seenPos[v.pos] = 1; });
+          var GEN = /\b([A-Za-z_]\w*)((?:\s|\*)+)([A-Za-z_]\w*)\s*(?=[;,=\[)])/g;
+          depth = 0; paren = 0; at = 0;
+          while ((m = GEN.exec(s))) {
+            var gt = m[1], gn = m[3], gp = m.index + m[1].length + m[2].length;
+            if (KW.has(gt) || TY.has(gt) || KW.has(gn) || TY.has(gn) || /^(unsigned|signed|long|short|return|case|goto)$/.test(gt) || seenPos[gp]) { GEN.lastIndex = m.index + m[1].length; continue; }
+            var bi = m.index - 1; while (bi >= 0 && /\s/.test(s[bi])) bi--;
+            if ((bi >= 0 && ";{}(,".indexOf(s[bi]) < 0) || inBody(gp)) { GEN.lastIndex = m.index + m[1].length; continue; }
+            advance(m.index);
+            var gtype = (gt + (m[2].indexOf("*") >= 0 ? " " + m[2].replace(/\s/g, "") : "")) + (s.charAt(m.index + m[0].length) === "[" ? "[]" : "");
+            r.vars.push({ name: gn, type: gtype, pos: gp, global: depth === 0 && paren === 0, param: paren > 0 && depth === 0 });
+            GEN.lastIndex = gp + gn.length;
+          }
+          r.vars.sort(function (a, b) { return a.pos - b.pos; });
+          return r;
+        }
+        function fileCode(i) { return i === active ? ta.value : files[i].code; }
+        function indexOf(i) {
+          var f = files[i], code = fileCode(i), c = idxCache[f.name];
+          if (!c || c.code !== code) { c = idxCache[f.name] = { code: code, idx: scanFile(code) }; }
+          return c.idx;
+        }
+        function scheduleScan() { clearTimeout(scanTimer); scanTimer = setTimeout(function () { scanTimer = 0; indexOf(active); }, 300); }
+        // Scan now only if an edit is waiting for the debounced scan (once when the popup opens, not per keystroke).
+        function flushScan() { if (scanTimer) { clearTimeout(scanTimer); scanTimer = 0; indexOf(active); } }
+        function cachedIndex(i) { var c = idxCache[files[i].name]; return c ? c.idx : indexOf(i); }
+
+        /* --- context at the caret --- */
+        var MEMBER_RE = /([A-Za-z_]\w*(?:\s*\[[^\]\n]*\])*(?:\s*(?:\.|->)\s*[A-Za-z_]\w*(?:\s*\[[^\]\n]*\])*)*)\s*(\.|->)\s*(\w*)$/;
+        function getCtx() {
+          var v = ta.value, a = ta.selectionStart;
+          if (a !== ta.selectionEnd) return null;
+          var ls = lineStart(v, a), line = v.slice(ls, a), m, wm;
+          var end = a;
+          if ((m = /^\s*#\s*include\s*<([\w.\/]*)$/.exec(line))) return { mode: "header", prefix: m[1], start: a - m[1].length, end: end, close: ">" };
+          if ((m = /^\s*#\s*include\s*"([\w.\/-]*)$/.exec(line))) return { mode: "local", prefix: m[1], start: a - m[1].length, end: end, close: '"' };
+          if (ctxAt(v, a) !== "code") return null;
+          if ((m = MEMBER_RE.exec(line)) && !/[\w.]/.test(line.charAt(m.index - 1) || " ") && !/^\d/.test(m[1])) return { mode: "member", chain: m[1], prefix: m[3], start: a - m[3].length, end: end };
+          wm = /[A-Za-z_]\w*$/.exec(line);
+          if (wm && wm.index > 0 && /[\w.]/.test(line.charAt(wm.index - 1))) return null; // inside a number like 0x1f or 1e5
+          var pre = wm ? wm[0] : "", st = a - pre.length;
+          var directive = /^\s*#\s*$/.test(line.slice(0, line.length - pre.length));
+          if (/^\s*#/.test(line) && !directive) return null; // rest of a # line
+          return { mode: "word", prefix: pre, start: st, end: end, directive: directive };
+        }
+
+        /* --- candidates --- */
+        function structKeyOf(type, all) {
+          var t = String(type || "").replace(/\b(const|volatile|static|extern|register)\b/g, " ").replace(/\s+/g, " ").trim(), m;
+          for (var guard = 0; guard < 4; guard++) {
+            if ((m = /\b(struct|union) ([A-Za-z_]\w*)/.exec(t))) return m[1] + " " + m[2];
+            var w = t.replace(/[\s*\[\]]/g, "");
+            var td = all.typedefs[w];
+            if (!td) return null;
+            if (all.structs[td]) return td;
+            t = td;
+          }
+          return null;
+        }
+        function mergedIndex() {
+          var all = { structs: {}, typedefs: {} };
+          for (var i = 0; i < files.length; i++) {
+            var x = cachedIndex(i);
+            Object.keys(x.structs).forEach(function (k) { all.structs[k] = x.structs[k]; });
+            Object.keys(x.typedefs).forEach(function (k) { all.typedefs[k] = x.typedefs[k]; });
+          }
+          return all;
+        }
+        function varType(name, caret) {
+          var me = cachedIndex(active), best = null;
+          me.vars.forEach(function (v) { if (v.name === name && (v.pos <= caret || !best)) { if (!best || v.pos <= caret) best = v; } });
+          if (best) return best.type;
+          for (var i = 0; i < files.length; i++) if (i !== active) {
+            var x = cachedIndex(i);
+            for (var k = 0; k < x.vars.length; k++) if (x.vars[k].global && x.vars[k].name === name) return x.vars[k].type;
+          }
+          return null;
+        }
+        function memberItems(ctx) {
+          var all = mergedIndex();
+          var parts = ctx.chain.replace(/\s*\[[^\]]*\]/g, "").split(/\s*(?:\.|->)\s*/);
+          var type = varType(parts[0], ctx.start);
+          for (var i = 1; type && i < parts.length; i++) {
+            var key = structKeyOf(type, all), fl = key && all.structs[key], f = null;
+            if (fl) for (var j = 0; j < fl.length; j++) if (fl[j].name === parts[i]) f = fl[j];
+            type = f ? f.type : null;
+          }
+          var sk = type && structKeyOf(type, all), fields = sk && all.structs[sk];
+          if (!fields) return [];
+          var label = sk.replace(/ <(.*)>$/, " $1");
+          return fields.map(function (f) { return { label: f.name, kind: "成员", detail: f.type, doc: label + " 的成员 · <code>" + esc(f.type + " " + f.name) + "</code>", boost: 400 }; });
+        }
+        function wordItems(ctx) {
+          var items = [], seen = Object.create(null);
+          function add(it) { var k = it.label + (it.kind === "片段" ? "#s" : ""); if (seen[k]) return; seen[k] = 1; items.push(it); }
+          if (ctx.directive) {
+            DIRECTIVES.forEach(function (d) { add({ label: d, kind: "关键字", detail: "#" + d, doc: "预处理指令 <code>#" + d + "</code>", insert: d === "include" ? "include <$0>" : d === "pragma" ? "pragma once$0" : d + " $0", reopen: d === "include" }); });
+            return items;
+          }
+          // the current file, then the other open tabs
+          var me = cachedIndex(active), caret = ta.selectionStart;
+          me.vars.slice().sort(function (a, b) { return Math.abs(caret - a.pos) - Math.abs(caret - b.pos); }).forEach(function (v) {
+            if (v.pos >= ctx.start && v.pos <= ctx.end) return; // the word being typed
+            add({ label: v.name, kind: "变量", detail: v.type, doc: (v.global ? "全局变量" : v.param ? "参数" : "局部变量") + " · <code>" + esc(v.type + " " + v.name) + "</code>", boost: 300 });
+          });
+          me.funcs.forEach(function (f) { if (f.name !== "main") add({ label: f.name, kind: "函数", detail: f.detail, doc: "本文件中的函数 · <code>" + esc(f.detail) + "</code>", fn: true, noargs: f.noargs, boost: 300 }); });
+          me.macros.forEach(function (f) { add({ label: f.name, kind: "宏", detail: f.detail, doc: "<code>#define " + esc(f.name + f.detail) + "</code>", boost: 300 }); });
+          me.types.forEach(function (t) { add({ label: t.name, kind: "类型", detail: t.detail, doc: "<code>" + esc(t.detail) + "</code>", boost: 280 }); });
+          me.enums.forEach(function (t) { add({ label: t.name, kind: "宏", detail: t.detail, doc: "枚举常量 · " + esc(t.detail), boost: 280 }); });
+          for (var i = 0; i < files.length; i++) if (i !== active) {
+            var x = cachedIndex(i), fn = files[i].name;
+            x.funcs.forEach(function (f) { add({ label: f.name, kind: "函数", detail: f.detail, doc: fn + " · <code>" + esc(f.detail) + "</code>", fn: true, noargs: f.noargs, boost: 220 }); });
+            x.macros.forEach(function (f) { add({ label: f.name, kind: "宏", detail: f.detail, doc: fn + " · <code>#define " + esc(f.name + f.detail) + "</code>", boost: 220 }); });
+            x.types.forEach(function (t) { add({ label: t.name, kind: "类型", detail: t.detail, doc: fn + " · <code>" + esc(t.detail) + "</code>", boost: 200 }); });
+            x.enums.forEach(function (t) { add({ label: t.name, kind: "宏", detail: t.detail, doc: fn + " · 枚举常量", boost: 200 }); });
+            x.vars.forEach(function (v) { if (v.global) add({ label: v.name, kind: "变量", detail: v.type, doc: fn + " 中的全局变量", boost: 200 }); });
+          }
+          C_SNIP.forEach(function (s) { add({ label: s[0], kind: "片段", detail: s[2], doc: "代码片段 · <code>" + esc(s[3]) + "</code>", insert: s[1], boost: 60 }); });
+          C_KW.forEach(function (k) { if (!SNIP_KW[k]) add({ label: k, kind: "关键字", detail: "", doc: "C 关键字", boost: 40 }); });
+          C_TY.forEach(function (k) { add({ label: k, kind: "类型", detail: "", doc: "C 类型", boost: 30 }); });
+          C_FN.forEach(function (f) { add({ label: f[0], kind: "函数", detail: f[1], doc: "<code>#include &lt;" + f[3] + "&gt;</code> · " + esc(f[2]), insert: f[4], fn: true, noargs: /\(void\)$/.test(f[1]), boost: 20 }); });
+          C_CONST.forEach(function (c) { add({ label: c[0], kind: "宏", detail: "", doc: esc(c[1]), boost: 10 }); });
+          return items;
+        }
+        function headerItems(ctx) {
+          if (ctx.mode === "local") return files.filter(function (f, i) { return i !== active && /\.h$/.test(f.name); }).map(function (f) { return { label: f.name, kind: "头文件", detail: "", doc: "你的头文件", insert: f.name, header: '"' }; });
+          return C_HEADERS.map(function (h) { return { label: h[0], kind: "头文件", detail: "", doc: esc(h[1]), insert: h[0], header: ">" }; });
+        }
+        // Match quality: case-sensitive prefix > any-case prefix > substring > fuzzy (in-order letters).
+        function score(label, p) {
+          if (!p) return { s: 0, hit: [] };
+          var i, hit = [];
+          if (label.lastIndexOf(p, 0) === 0) { for (i = 0; i < p.length; i++) hit.push(i); return { s: 3000, hit: hit }; }
+          var ll = label.toLowerCase(), pl = p.toLowerCase();
+          if (ll.lastIndexOf(pl, 0) === 0) { for (i = 0; i < p.length; i++) hit.push(i); return { s: 2500, hit: hit }; }
+          var at = ll.indexOf(pl);
+          if (at > 0 && p.length > 1) { for (i = 0; i < p.length; i++) hit.push(at + i); return { s: 1500 - at, hit: hit }; }
+          if (ll[0] !== pl[0]) return null;
+          var j = 0, gaps = 0, last = -1;
+          for (i = 0; i < ll.length && j < pl.length; i++) if (ll[i] === pl[j]) { if (last >= 0 && i !== last + 1) gaps++; hit.push(i); last = i; j++; }
+          if (j < pl.length) return null;
+          return { s: 800 - gaps * 40, hit: hit };
+        }
+        function rank(items, p) {
+          var res = [];
+          items.forEach(function (it, n) {
+            if (p && it.label === p && it.kind !== "片段" && !it.fn && !it.insert) return; // already fully typed
+            var sc = score(it.label, p);
+            if (!sc) return;
+            it.hit = sc.hit; it.rank = sc.s + (it.boost || 0) - (p ? Math.min(it.label.length, 30) : 0); it.n = n;
+            res.push(it);
+          });
+          res.sort(function (a, b) { return b.rank - a.rank || a.n - b.n; });
+          return res.slice(0, 50);
+        }
+
+        /* --- popup --- */
+        var ac = { open: false, items: [], sel: 0, ctx: null, el: null, list: null, doc: null, touch: null };
+        function acBuild() {
+          if (ac.el) return;
+          var el = document.createElement("div");
+          el.className = "x-ac"; el.id = "ac"; el.hidden = true;
+          el.innerHTML = '<ul class="x-ac__list" id="ac-list" role="listbox" aria-label="代码补全"></ul><div class="x-ac__doc" id="ac-doc"></div>';
+          app.appendChild(el); // inside .x-app so the theme variables apply
+          ac.el = el; ac.list = el.firstChild; ac.doc = el.lastChild;
+          // Keep focus (and the phone keyboard) in the editor while choosing.
+          el.addEventListener("mousedown", function (e) { e.preventDefault(); });
+          el.addEventListener("click", function (e) { var li = e.target.closest ? e.target.closest("li[data-i]") : null; if (li) acAccept(+li.getAttribute("data-i")); });
+          el.addEventListener("touchstart", function (e) { var t = e.touches[0]; ac.touch = { x: t.clientX, y: t.clientY, moved: false }; }, { passive: true });
+          el.addEventListener("touchmove", function (e) { var t = e.touches[0]; if (ac.touch && (Math.abs(t.clientX - ac.touch.x) > 8 || Math.abs(t.clientY - ac.touch.y) > 8)) ac.touch.moved = true; }, { passive: true });
+          el.addEventListener("touchend", function (e) {
+            var li = e.target.closest ? e.target.closest("li[data-i]") : null;
+            if (ac.touch && !ac.touch.moved && li) { e.preventDefault(); acAccept(+li.getAttribute("data-i")); }
+            ac.touch = null;
+          }, { passive: false });
+        }
+        function acClose() {
+          if (!ac || !ac.open) return;
+          ac.open = false; ac.items = []; ac.ctx = null;
+          if (ac.el) ac.el.hidden = true;
+          ta.removeAttribute("aria-activedescendant"); ta.setAttribute("aria-expanded", "false");
+        }
+        function renderLabel(it) {
+          var s = "", h = it.hit || [], k = 0;
+          for (var i = 0; i < it.label.length; i++) {
+            var c = esc(it.label[i]);
+            if (h[k] === i) { s += "<b>" + c + "</b>"; k++; } else s += c;
+          }
+          return s;
+        }
+        function acRender() {
+          var html = "";
+          ac.items.forEach(function (it, i) {
+            html += '<li class="x-ac__item' + (i === ac.sel ? " is-sel" : "") + '" id="ac-' + i + '" role="option" aria-selected="' + (i === ac.sel) + '" data-i="' + i + '">' +
+              '<span class="x-ac__tag" data-k="' + it.kind + '">' + it.kind + "</span>" +
+              '<span class="x-ac__label">' + renderLabel(it) + "</span>" +
+              (it.detail ? '<span class="x-ac__detail">' + esc(it.detail) + "</span>" : "") + "</li>";
+          });
+          ac.list.innerHTML = html;
+          acDoc();
+        }
+        function acDoc() {
+          var it = ac.items[ac.sel];
+          ac.doc.innerHTML = it && it.doc ? it.doc : "";
+          ta.setAttribute("aria-activedescendant", "ac-" + ac.sel);
+        }
+        function acMove(d) {
+          var n = ac.items.length; if (!n) return;
+          var old = ac.list.children[ac.sel];
+          ac.sel = (ac.sel + d + n) % n;
+          var li = ac.list.children[ac.sel];
+          if (old) { old.classList.remove("is-sel"); old.setAttribute("aria-selected", "false"); }
+          if (li) {
+            li.classList.add("is-sel"); li.setAttribute("aria-selected", "true");
+            var lt = li.offsetTop, lb = lt + li.offsetHeight;
+            if (lt < ac.list.scrollTop) ac.list.scrollTop = lt - 4;
+            else if (lb > ac.list.scrollTop + ac.list.clientHeight) ac.list.scrollTop = lb - ac.list.clientHeight + 4;
+          }
+          acDoc();
+        }
+        function caretBox(at) {
+          var v = ta.value, ls = lineStart(v, at), line = 1;
+          for (var i = 0; i < ls; i++) if (v.charCodeAt(i) === 10) line++;
+          mirror.textContent = v.slice(ls, at);
+          var mk = document.createElement("span"); mk.textContent = "\u200b"; mirror.appendChild(mk);
+          var x = mk.offsetLeft, r = ta.getBoundingClientRect();
+          var cs = window.getComputedStyle ? getComputedStyle(ta) : null, padL = cs ? parseFloat(cs.paddingLeft) || 14 : 14;
+          var left = r.left + padL + x - ta.scrollLeft, top = r.top + PADY + (line - 1) * LH - ta.scrollTop;
+          return { left: left, top: top, bottom: top + LH, editor: r };
+        }
+        function acPlace() {
+          if (!ac || !ac.open || !ac.ctx || !ac.el) return;
+          var b = caretBox(ac.ctx.start), el = ac.el;
+          var vTop = vv ? vv.offsetTop : 0, vLeft = vv ? vv.offsetLeft : 0;
+          var vH = vv ? vv.height : window.innerHeight, vW = vv ? vv.width : window.innerWidth;
+          var vBottom = vTop + vH;
+          if (b.bottom < b.editor.top || b.top > b.editor.bottom) { el.style.visibility = "hidden"; return; }
+          el.style.visibility = "";
+          el.style.maxHeight = "";
+          var h = el.offsetHeight, w = el.offsetWidth;
+          var below = vBottom - b.bottom - 6, above = b.top - vTop - 6, top;
+          if (h <= below || below >= above) { if (h > below) el.style.maxHeight = Math.max(80, below) + "px"; top = b.bottom + 2; }
+          else { if (h > above) { el.style.maxHeight = Math.max(80, above) + "px"; h = el.offsetHeight; } top = b.top - h - 2; }
+          var left = b.left - 61; // line the labels up with the typed text
+          left = Math.max(vLeft + 8, Math.min(left, vLeft + vW - w - 8));
+          el.style.transform = "translate(" + Math.round(left) + "px," + Math.round(top) + "px)";
+        }
+        function acUpdate(explicit) {
+          var ctx = getCtx();
+          if (!ctx) return acClose();
+          if (ctx.mode === "word" && !explicit && ctx.prefix.length < 1) return acClose();
+          if (!ac.open || ctx.mode === "member") flushScan();
+          var src = ctx.mode === "member" ? memberItems(ctx) : ctx.mode === "word" ? wordItems(ctx) : headerItems(ctx);
+          var items = rank(src, ctx.prefix);
+          if (!items.length) return acClose();
+          acBuild();
+          ac.ctx = ctx; ac.items = items; ac.sel = 0;
+          ac.open = true;
+          ac.el.hidden = false;
+          ta.setAttribute("aria-expanded", "true"); ta.setAttribute("aria-controls", "ac-list");
+          acRender();
+          ac.list.scrollTop = 0;
+          acPlace();
+        }
+        function acKey(e) {
+          if (e.isComposing) return false;
+          if (e.key === "ArrowDown") { acMove(1); return true; }
+          if (e.key === "ArrowUp") { acMove(-1); return true; }
+          if (e.key === "PageDown") { acMove(Math.min(7, ac.items.length - 1 - ac.sel) || 0); return true; }
+          if (e.key === "PageUp") { acMove(-Math.min(7, ac.sel) || 0); return true; }
+          if ((e.key === "Enter" || e.key === "Tab") && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) { acAccept(ac.sel); return true; }
+          if (e.key === "Escape") { acClose(); return true; }
+          return false;
+        }
+        function acAccept(i) {
+          var it = ac.items[i], ctx = ac.ctx;
+          if (!it || !ctx) return;
+          var v = ta.value, start = ctx.start, end = ctx.end, text;
+          if (it.header) { text = it.insert + (v.charAt(end) === it.header ? "" : it.header) + "$0"; }
+          else if (it.insert) text = it.insert;
+          else if (it.fn) text = v.charAt(end) === "(" ? it.label + "$0" : it.label + (it.noargs ? "()$0" : "($0)");
+          else text = it.label + "$0";
+          if (text.charAt(0) === "#" && v.charAt(start - 1) === "#") start--;
+          var ls = lineStart(v, start), indent = /^[ \t]*/.exec(v.slice(ls, start))[0];
+          text = text.replace(/\n/g, "\n" + indent);
+          var caret = text.indexOf("$0");
+          if (caret < 0) caret = text.length; else text = text.slice(0, caret) + text.slice(caret + 2);
+          acClose();
+          replace(start, end, text, start + caret);
+          if (it.reopen) acUpdate(true);
+        }
+        window.addEventListener("resize", function () { if (ac.open) acPlace(); });
+
+        /* ---------- save / restore (normal pages only) ---------- */
+        var saveTimer = 0;
+        function afterEdit() { scheduleScan(); if (store) { clearTimeout(saveTimer); saveTimer = setTimeout(saveState, 600); } }
+        function saveState() {
+          if (!store) return;
+          saveActive();
+          sset("cplay:v1", JSON.stringify({ files: files.map(function (f) { return { name: f.name, code: f.code }; }), active: active, stdin: stdinEl.value }));
+        }
+        stdinEl.addEventListener("input", function () { if (store) { clearTimeout(saveTimer); saveTimer = setTimeout(saveState, 600); } });
+
         /* ---------- toolbar ---------- */
+        (function () { var o = document.createElement("option"); o.value = ""; o.disabled = true; o.textContent = "选择示例程序…"; sel.appendChild(o); })();
         EXAMPLES.forEach(function (ex, i) {
           var o = document.createElement("option");
           o.value = String(i); o.textContent = "示例：" + ex.title;
           sel.appendChild(o);
         });
         sel.addEventListener("change", function () {
+          if (sel.value === "") return;
           var ex = EXAMPLES[+sel.value];
           if (!ex) return;
           setFiles(ex.code, ex.files);
           stdinEl.value = ex.stdin || "";
+          setMenu(false);
+          if (isPhone()) setView("code");
+          setStatus("", ["已载入示例：" + ex.title]);
+          afterEdit();
         });
         runBtn.addEventListener("click", run);
         $("addfile").addEventListener("click", addFile);
         stopBtn.addEventListener("click", stop);
         $("clear").addEventListener("click", function () { clearOut(); });
         $("download").addEventListener("click", function () {
+          setMenu(false);
           var name = files[active].name;
           var url = URL.createObjectURL(new Blob([ta.value], { type: (/\.h$/.test(name) ? "text/x-chdr" : "text/x-csrc") + ";charset=utf-8" }));
           var a = document.createElement("a");
@@ -2801,7 +3670,7 @@ self.onmessage = function (ev) {
           document.body.appendChild(a); a.click(); a.remove();
           setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
         });
-        $("import").addEventListener("click", function () { fileIn.click(); });
+        $("import").addEventListener("click", function () { setMenu(false); fileIn.click(); });
         fileIn.addEventListener("change", function () {
           var f = fileIn.files && fileIn.files[0];
           if (!f) return;
@@ -2809,6 +3678,7 @@ self.onmessage = function (ev) {
           rd.onload = function () {
             var text = String(rd.result).replace(/\r\n?/g, "\n");
             var nm = f.name.replace(/^.*[\\/]/, "");
+            if (isPhone()) setView("code");
             if (/\.h$/i.test(nm) && NAME_RE.test(nm)) {
               saveActive();
               var k = findFile(nm);
@@ -2828,11 +3698,40 @@ self.onmessage = function (ev) {
         document.addEventListener("keydown", function (e) {
           if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); run(); }
         });
+        function onLayout() {
+          fitViewport();
+          if (!isPhone()) app.setAttribute("data-view", view = "code");
+          setMenu(false);
+          acClose();
+          sync();
+        }
+        if (mqPhone.addEventListener) { mqPhone.addEventListener("change", onLayout); mqMenu.addEventListener("change", function () { setMenu(false); }); }
 
-        sel.value = "0";
-        setFiles(EXAMPLES[0].code, EXAMPLES[0].files);
-        stdinEl.value = EXAMPLES[0].stdin;
+        /* ---------- start ---------- */
+        var restored = false, saved = sget("cplay:v1");
+        if (saved) {
+          try {
+            var st = JSON.parse(saved);
+            if (st && st.files && st.files.length && st.files[0].name === "main.c") {
+              files = st.files.filter(function (f) { return f && typeof f.code === "string" && (f.name === "main.c" || NAME_RE.test(f.name)); }).map(function (f) { return { name: f.name, code: f.code }; });
+              stdinEl.value = st.stdin || "";
+              showFile(Math.min(Math.max(0, st.active | 0), files.length - 1));
+              sel.value = "";
+              restored = true;
+            }
+          } catch (e) { restored = false; }
+        }
+        if (!restored) {
+          sel.value = "0";
+          setFiles(EXAMPLES[0].code, EXAMPLES[0].files);
+          stdinEl.value = EXAMPLES[0].stdin;
+        }
+        var sp = parseFloat(sget("cplay:split"));
+        setSplit(sp > 0 && sp < 1 ? sp : 0.6, false);
+        setView("code");
         if (document.fonts && document.fonts.ready) document.fonts.ready.then(sync);
+        // Test hook (read-only handles; nothing on the page depends on it).
+        window.CPlay = { files: function () { saveActive(); return files; }, run: run, stop: stop, setView: setView, complete: acUpdate, accept: acAccept, popup: function () { return ac; }, scan: scanFile, highlightCount: function () { return hlCount; } };
       })();
     </script>
   </body>
