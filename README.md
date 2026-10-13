@@ -34,6 +34,63 @@
 | `src/examples.json` | 内置示例（由 `src/examples.py` 生成） |
 | `tests/` | Node 测试：`node tests/tests.js`（90 个用例）、`node tests/run_examples.js`、`node tests/perf.js` |
 
+## 手动添加 / 修改文件
+
+> 页面是**单文件**：`index.html` 里内联了示例列表（`const EXAMPLES = [...]`）和解释器副本（`<script type="text/plain" id="worker-src">`，供 Web Worker 使用）。改了源文件后要同步到 `index.html`，否则线上看不到变化。
+
+### 添加内置示例
+1. 编辑 `src/examples.py`，在末尾 `json.dump` 之前追加：
+   ```python
+   add("示例标题", r'''
+   #include <stdio.h>
+
+   int main(void) {
+       int n;
+       scanf("%d", &n);
+       printf("%d\n", n * 2);
+       return 0;
+   }
+   ''', stdin="21\n")                       # stdin 可选：预填到「输入」框
+
+   # 多文件示例：主代码是 main.c，其他文件放 files
+   add("多文件示例", r'''#include "util.h" …''', files={"util.h": r'''…''', "util.c": r'''…'''})
+   ```
+2. 生成 JSON：`cd src && python3 examples.py`（会输出示例总数，并改写 `src/examples.json`）。
+3. 把 `src/examples.json` 的整个数组粘贴到 `index.html` 中 `const EXAMPLES = ` 后面，替换原来的 `[ … ];`（JSON 本身就是合法的 JS）。
+4. 检查：`node tests/run_examples.js` 会逐个运行所有示例。
+
+`examples.json` 每项格式：
+| 字段 | 说明 |
+| --- | --- |
+| `title` | 下拉框里显示的名字 |
+| `code` | `main.c` 的内容（以换行结尾） |
+| `stdin` | 预填的标准输入，可为空字符串 |
+| `files` | 可选，`{ "文件名.h": "内容", "文件名.c": "内容" }` |
+
+### 修改解释器
+1. 改 `cinterp.js`（Worker 胶水代码在 `src/worker-snippet.js`）。
+2. 跑测试：`node tests/tests.js`。
+3. 同步到 `index.html`：`id="worker-src"` 那段的内容 = `cinterp.js` + 换行 + `src/worker-snippet.js`，整体替换。
+   ```bash
+   python3 - <<'PY'
+   import re
+   h = open('index.html', encoding='utf-8').read()
+   body = open('cinterp.js', encoding='utf-8').read().strip() + '\n' + open('src/worker-snippet.js', encoding='utf-8').read().strip()
+   h = re.sub(r'(<script type="text/plain" id="worker-src">\n?)[\s\S]*?(\n?</script>)', lambda m: m.group(1) + body + m.group(2), h, count=1)
+   open('index.html', 'w', encoding='utf-8').write(h)
+   PY
+   ```
+
+### 其他文件
+| 文件 | 何时改 |
+| --- | --- |
+| `hark.css` / `hark-hero.css` / `hark-charts.css` / `hark.js` | 页面样式与交互 |
+| `protect.js` | 右键 / 快捷键限制 |
+| `CNAME` | 自定义域名（`c.0x-z.cn`） |
+| `sitemap.xml` / `robots.txt` | 搜索引擎，一般不用改 |
+
+push 到 `main` 后 Pages 部署约 1–2 分钟。
+
 ## 解释器 API
 
 ```js
