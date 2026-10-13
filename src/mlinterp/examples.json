@@ -1,0 +1,88 @@
+[
+  {
+    "id": "basics",
+    "title": "1. 基础与显示",
+    "files": {
+      "main.m": "% 示例 1：基础与显示\n% 演示变量赋值、不加分号时的自动显示、format long 以及 fprintf 格式化输出\nclear;\na = 7            % 不加分号：自动显示变量的值\nb = 2.5;         % 加分号：不显示\nc = a * b        % 乘法结果会被显示\nname = '圆周率';\nv = [1 2 3 4]    % 行向量\n% 默认 format short：保留 4 位小数\np = pi\n% 切换为 format long：显示更多有效数字\nformat long\np = pi\nformat short     % 恢复默认格式\n% fprintf：按格式字符串输出\nfprintf('a = %d, b = %.2f\\n', a, b);\nfprintf('%s 约等于 %.6f\\n', name, pi);\nfprintf('科学计数法：%e\\n', 12345.678);\n% fprintf 会循环使用格式，逐个输出向量元素\nfprintf('元素：%d\\n', v);\n% disp 只显示值，不显示变量名\ndisp('计算完成！');\ndisp(c);\ncls = class(c)   % 查看变量的数据类型\n"
+    }
+  },
+  {
+    "id": "linalg",
+    "title": "2. 矩阵运算与线性方程组",
+    "files": {
+      "main.m": "% 示例 2：矩阵运算与线性方程组\n% 演示矩阵乘法、左除求解 Ax=b、求逆、行列式与特征值\nA = [4 -2 1; -2 4 -2; 1 -2 4]   % 对称正定矩阵\nB = [1 0 2; 0 1 0; 3 0 1];\n% 矩阵乘法（按线性代数规则）\nC = A * B\n% 逐元素乘法（注意点号）\nD = A .* B\n% 求解线性方程组 A*x = b\nb = [11; -16; 17];\nx = A \\ b                  % 推荐写法：左除\n% 验证：残差应接近 0\nresidual = norm(A*x - b)\n% 矩阵的逆与行列式\nAinv = inv(A)\ndetA = det(A)\n% 用逆矩阵求解（与左除结果相同，但数值上不推荐）\nx2 = Ainv * b\n% 特征值与特征向量：A*V = V*D\n[V, L] = eig(A);\nlambda = diag(L)\n% 验证第一个特征对\nerr = norm(A*V(:,1) - lambda(1)*V(:,1))\nfprintf('转置后迹 trace(A'') = %g\\n', trace(A'));\n"
+    }
+  },
+  {
+    "id": "logical-index",
+    "title": "3. 逻辑索引与查找",
+    "files": {
+      "main.m": "% 示例 3：逻辑索引与查找\n% 演示逻辑掩码、find、any/all 的用法\nscores = [78 92 55 88 61 47 95 70]\n% 逻辑掩码：比较运算得到 logical 数组\npass = scores >= 60\n% 用逻辑掩码直接取出及格的分数\npassedScores = scores(pass)\n% find 返回满足条件的元素下标\nfailIdx = find(scores < 60)\n% 找出第一个 90 分以上的位置\nfirstTop = find(scores > 90, 1)\n% 组合条件：& 表示“与”，| 表示“或”\nmid = scores(scores >= 70 & scores < 90)\n% any：是否存在；all：是否全部满足\nhasFail = any(scores < 60)\nallPositive = all(scores > 0)\n% 逻辑索引赋值：把不及格的分数统一改为 60\nfixed = scores;\nfixed(fixed < 60) = 60\n% 统计个数：对逻辑数组求和\nnPass = sum(pass);\nfprintf('及格人数：%d / %d\\n', nPass, numel(scores));\n% 矩阵中查找：返回行、列下标\nM = magic(4);\n[r, c] = find(M > 13);\ndisp([r c]);\n"
+    }
+  },
+  {
+    "id": "strings",
+    "title": "4. 字符串处理",
+    "files": {
+      "main.m": "% 示例 4：字符串处理\n% 演示 sprintf、strsplit、regexprep、upper、num2str 等函数\ns = 'hello matlab world';\n% upper / lower：大小写转换\nu = upper(s)\n% strsplit：按分隔符拆分为元胞数组\nwords = strsplit(s, ' ')\nn = numel(words);\nfprintf('共有 %d 个单词\\n', n);\n% 逐个处理：首字母大写\nfor k = 1:n\n    w = words{k};\n    words{k} = [upper(w(1)) w(2:end)];\nend\ntitle_s = strjoin(words, ' ')\n% sprintf：格式化生成字符串（不直接输出）\nmsg = sprintf('第 %d 项的长度为 %d', 2, length(words{2}))\n% num2str：数字转字符串，便于拼接\nx = 3.14159;\ninfo = ['x 的值是 ' num2str(x) '，保留两位：' num2str(x, '%.2f')]\n% regexprep：正则表达式替换（把数字替换为 #）\ncode = 'ID2024-A17-B3';\nmasked = regexprep(code, '\\d', '#')\n% 替换多个空格为单个空格\nclean = regexprep('a   b    c', '\\s+', ' ')\n% strrep 与 strfind\nr = strrep(s, 'world', '世界')\npos = strfind(s, 'o')\n"
+    }
+  },
+  {
+    "id": "cells-structs",
+    "title": "5. 元胞数组与结构体",
+    "files": {
+      "main.m": "% 示例 5：元胞数组与结构体\n% 元胞数组可以存放不同类型的数据；结构体用字段组织数据\nc = {42, 'MATLAB', [1 2 3]; true, int8(7), @sin}\nclass(c{1,2})          % 用花括号取出内容\n% cellfun：对每个元胞应用函数\nlens = cellfun(@numel, c)\nnames = {'苹果', '香蕉', '樱桃'};\n% UniformOutput 为 false 时返回元胞数组\ntagged = cellfun(@(s) ['水果:' s], names, 'UniformOutput', false)\n% 结构体数组：每个元素有相同的字段\nstudents(1).name = '张三'; students(1).score = 88;\nstudents(2).name = '李四'; students(2).score = 95;\nstudents(3).name = '王五'; students(3).score = 72;\nstudents\n% fieldnames：列出所有字段名\nf = fieldnames(students)\n% 提取所有分数组成向量\nallScores = [students.score]\n[~, best] = max(allScores);\nfprintf('最高分：%s（%d 分）\\n', students(best).name, allScores(best));\n% 用 struct 函数一次创建，并动态访问字段\np = struct('x', 1, 'y', 2);\nfld = 'y';\np.(fld) = 10;\ndisp(p);\nisfield(p, 'z')\n"
+    }
+  },
+  {
+    "id": "functions",
+    "title": "6. 函数文件与匿名函数",
+    "files": {
+      "main.m": "% 示例 6：函数文件与匿名函数\n% stats 定义在单独的函数文件 stats.m 中，返回均值和标准差两个输出\ndata = [2 4 4 4 5 5 7 9];\n[m, s] = stats(data);\nfprintf('均值 = %.4f，标准差 = %.4f\\n', m, s);\n% 只接收第一个输出\nonlyMean = stats([10 20 30])\n% 匿名函数：@(参数) 表达式\nsq = @(x) x.^2;\nf = @(x, y) sqrt(x.^2 + y.^2);\nsq(5)\nf(3, 4)\n% 匿名函数可以捕获当前工作区的变量\nk = 3;\nscale = @(x) k * x;\nscale(7)\n% arrayfun：对数组每个元素调用函数\nfact = arrayfun(@(n) prod(1:n), 1:6)\n% 函数句柄作为参数传递\ng = @(t) exp(-t) .* cos(2*pi*t);\narea = integral(g, 0, 2);\nfprintf('积分结果 = %.6f\\n', area);\n% 用 fzero 求方程 cos(x) = x 的根\nroot = fzero(@(x) cos(x) - x, 0.5)\n",
+      "stats.m": "function [m, s] = stats(x)\n% STATS 计算向量的均值和（总体）标准差\n%   [m, s] = stats(x) 返回均值 m 和标准差 s\nn = numel(x);\nm = sum(x) / n;                 % 均值\nif nargout > 1\n    s = sqrt(sum((x - m).^2) / n);  % 仅在需要时计算标准差\nend\nend\n"
+    }
+  },
+  {
+    "id": "sin-cos-plot",
+    "title": "7. 正弦余弦绘图",
+    "files": {
+      "main.m": "% 示例 7：正弦余弦绘图\n% 演示 plot 的线型规格（LineSpec）、图例、标题、坐标轴标签和网格\nx = linspace(0, 2*pi, 100);   % 0 到 2π 之间取 100 个点\ny1 = sin(x);\ny2 = cos(x);\ny3 = sin(x) .* cos(x);\nfigure;\n% 'r-' 红色实线，'b--' 蓝色虚线\nplot(x, y1, 'r-', 'LineWidth', 2);\nhold on;                       % 保持当前图形，继续叠加\nplot(x, y2, 'b--', 'LineWidth', 2);\n% 'g:' 绿色点线；每隔 10 个点画一个圆圈标记\nplot(x, y3, 'g:');\nplot(x(1:10:end), y1(1:10:end), 'ko');\nhold off;\nlegend('sin(x)', 'cos(x)', 'sin(x)cos(x)', '采样点');\ntitle('正弦与余弦函数');\nxlabel('x（弧度）');\nylabel('函数值');\ngrid on;                       % 打开网格\naxis([0 2*pi -1.2 1.2]);       % 设置坐标范围\n% 输出几个关键点的数值\nfprintf('sin(pi/2) = %.4f, cos(pi) = %.4f\\n', sin(pi/2), cos(pi));\n"
+    }
+  },
+  {
+    "id": "subplot-gallery",
+    "title": "8. 子图画廊",
+    "files": {
+      "main.m": "% 示例 8：子图画廊\n% 用 subplot(2,2,k) 在一个窗口中排列 4 种常见图表\nrng(42);                         % 固定随机种子，保证结果可重复\nfigure;\n% 1. 柱状图\nsubplot(2, 2, 1);\nsales = [23 45 31 52 38];\nbar(sales);\ntitle('柱状图：月销量');\nxlabel('月份'); ylabel('销量');\n% 2. 饼图\nsubplot(2, 2, 2);\nshare = [40 25 20 15];\npie(share);\ntitle('饼图：市场份额');\n% 3. 直方图：标准正态分布随机数\nsubplot(2, 2, 3);\nr = randn(1000, 1);\nhistogram(r, 20);\ntitle('直方图：randn');\n% 4. 散点图\nsubplot(2, 2, 4);\nxs = rand(1, 50);\nys = 2 * xs + 0.3 * randn(1, 50);\nscatter(xs, ys, 'filled');\ntitle('散点图'); xlabel('x'); ylabel('y');\n% 打印随机样本的统计量\nfprintf('randn 样本均值 = %.3f，标准差 = %.3f\\n', mean(r), std(r));\n"
+    }
+  },
+  {
+    "id": "surface-3d",
+    "title": "9. 三维曲面",
+    "files": {
+      "main.m": "% 示例 9：三维曲面\n% peaks 是 MATLAB 自带的示例函数，常用于演示三维绘图\n[X, Y, Z] = peaks(40);           % 生成 40×40 的网格数据\nfprintf('网格大小：%d × %d\\n', size(Z, 1), size(Z, 2));\nfprintf('Z 的最大值 = %.3f，最小值 = %.3f\\n', max(Z(:)), min(Z(:)));\nfigure;\nsurf(X, Y, Z);                   % 绘制三维曲面\ncolorbar;                        % 显示颜色条\ntitle('peaks 函数曲面');\nxlabel('X'); ylabel('Y'); zlabel('Z');\nview(45, 30);                    % 方位角 45°，仰角 30°\n% 自己构造一个曲面：z = sin(r)/r（墨西哥帽）\n[x, y] = meshgrid(-8:0.5:8);\nr = sqrt(x.^2 + y.^2) + eps;     % 加 eps 避免除以 0\nz = sin(r) ./ r;\nfigure;\nsurf(x, y, z);\ncolorbar;\ntitle('sin(r)/r 曲面');\nview(3);                         % 默认三维视角\n"
+    }
+  },
+  {
+    "id": "ode45",
+    "title": "10. 常微分方程 ode45",
+    "files": {
+      "main.m": "% 示例 10：常微分方程 ode45\n% 阻尼振动方程：x'' + 2*zeta*w*x' + w^2*x = 0\n% 改写为一阶方程组：y1 = x, y2 = x'\nw = 2*pi;        % 固有角频率\nzeta = 0.1;      % 阻尼比\nodefun = @(t, y) [y(2); -2*zeta*w*y(2) - w^2*y(1)];\ntspan = [0 5];   % 时间区间\ny0 = [1; 0];     % 初始位移 1，初始速度 0\n[t, y] = ode45(odefun, tspan, y0);\nfprintf('求解步数：%d\\n', numel(t));\nfprintf('t = 5 时位移 = %.4f\\n', y(end, 1));\n% 与解析包络 exp(-zeta*w*t) 比较\nenv = exp(-zeta * w * t);\nfigure;\nplot(t, y(:,1), 'b-', 'LineWidth', 1.5);\nhold on;\nplot(t, env, 'r--', t, -env, 'r--');\nhold off;\nlegend('位移 x(t)', '包络线');\ntitle('阻尼振动（ode45 数值解）');\nxlabel('时间 t (s)'); ylabel('位移');\ngrid on;\n% 相平面图：速度对位移\nfigure;\nplot(y(:,1), y(:,2), 'm');\ntitle('相平面轨迹'); xlabel('x'); ylabel('dx/dt');\ngrid on;\n"
+    }
+  },
+  {
+    "id": "polyfit",
+    "title": "11. 多项式曲线拟合",
+    "files": {
+      "main.m": "% 示例 11：多项式曲线拟合\n% 用 polyfit 对带噪声的数据进行最小二乘多项式拟合，用 polyval 求值\nrng(1);\nx = 0:0.5:10;\nyTrue = 0.5*x.^2 - 3*x + 2;              % 真实的二次函数\ny = yTrue + 2*randn(size(x));            % 加入噪声的观测数据\n% 分别用 1 次和 2 次多项式拟合\np1 = polyfit(x, y, 1);\np2 = polyfit(x, y, 2);\nfprintf('一次拟合：y = %.3f x %+.3f\\n', p1);\nfprintf('二次拟合：y = %.3f x^2 %+.3f x %+.3f\\n', p2);\n% 计算拟合误差（均方根误差 RMSE）\nrmse1 = sqrt(mean((polyval(p1, x) - y).^2));\nrmse2 = sqrt(mean((polyval(p2, x) - y).^2));\nfprintf('RMSE：一次 = %.3f，二次 = %.3f\\n', rmse1, rmse2);\n% 在更密的点上画出拟合曲线\nxf = linspace(0, 10, 200);\nfigure;\nplot(x, y, 'ko', 'MarkerFaceColor', 'y');   % 数据点\nhold on;\nplot(xf, polyval(p1, xf), 'b--', 'LineWidth', 1.5);\nplot(xf, polyval(p2, xf), 'r-', 'LineWidth', 2);\nhold off;\nlegend('观测数据', '一次拟合', '二次拟合', 'Location', 'northwest');\ntitle('多项式曲线拟合');\nxlabel('x'); ylabel('y');\ngrid on;\n% 用二次模型预测 x = 12 处的值\npred = polyval(p2, 12)\n"
+    }
+  },
+  {
+    "id": "input",
+    "title": "12. 交互输入 input",
+    "files": {
+      "main.m": "% 示例 12：交互输入 input\n% input(提示) 读取数值表达式；input(提示, 's') 按原样读取字符串\nname = input('请输入你的名字：', 's');\na = input('请输入第一个数：');\nb = input('请输入第二个数：');\nfprintf('\\n你好，%s！\\n', name);\n% 基本四则运算\nfprintf('%g + %g = %g\\n', a, b, a + b);\nfprintf('%g - %g = %g\\n', a, b, a - b);\nfprintf('%g × %g = %g\\n', a, b, a * b);\n% 除法前先检查除数是否为 0\nif b ~= 0\n    fprintf('%g ÷ %g = %.4f\\n', a, b, a / b);\nelse\n    disp('除数为 0，无法计算除法。');\nend\n% 比较大小\nif a > b\n    fprintf('较大的数是 %g\\n', a);\nelseif a < b\n    fprintf('较大的数是 %g\\n', b);\nelse\n    disp('两个数相等。');\nend\n% 求最大公约数（仅当输入为正整数时）\nif all([a b] == round([a b])) && a > 0 && b > 0\n    fprintf('最大公约数 gcd = %d\\n', gcd(a, b));\nend\n"
+    },
+    "stdin": "小明\n48\n18"
+  }
+]
