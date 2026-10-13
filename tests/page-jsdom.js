@@ -1,7 +1,7 @@
 // jsdom tests for CPlay's editor, completion, tabs, examples and run (fallback path; jsdom has no Worker).
 const path = require("path");
 const { JSDOM, VirtualConsole } = require("/workspace/work/jt/node_modules/jsdom");
-const file = process.argv[2] || path.join(__dirname, "..", "index.html");
+const file = process.argv[2] || path.join(__dirname, "index.html");
 let pass = 0, fail = 0;
 function ok(cond, name, extra) { if (cond) { pass++; console.log("  ok  " + name); } else { fail++; console.log("  FAIL " + name + (extra !== undefined ? "  -> " + JSON.stringify(extra) : "")); } }
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -349,6 +349,32 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   langSel.value = "matlab"; langSel.dispatchEvent(new w.Event("change"));
   names = [...$("tabs").querySelectorAll(".x-tab__name")].map(b => b.textContent);
   ok(ta.value === mlCode && names.join(",") === "main.m,stats.m,area2.m", "MATLAB tabs preserved too", names);
+  langSel.value = "c"; langSel.dispatchEvent(new w.Event("change"));
+
+  console.log("completion never mixes languages");
+  const labelsFor = pre => { setAll(""); setCaret(0); type(pre); w.CPlay.complete(true); const l = popup().labels; key("Escape"); return l; };
+  const C_ONLY = ["printf", "scanf", "malloc", "free", "strlen", "puts", "include", "define", "struct", "typedef", "sizeof", "int", "char", "size_t", "NULL", "EOF", "INT_MAX", "main", "memcpy", "fgets", "putchar", "unsigned"];
+  const ML_ONLY = ["linspace", "disp", "plot", "zeros", "ones", "numel", "subplot", "surf", "meshgrid", "end", "elseif", "function", "fprintf", "sprintf", "num2str", "cellfun", "isempty", "pi", "eps", "ode45", "polyfit", "input"];
+  const prefixes = ["p", "s", "m", "f", "i", "d", "n", "e", "c", "u", "pr", "st", "ma", "in", "si", "nu", "de", "li", "ze", "po", "ce", "is"];
+  // C side: put a variable called 'plotlen' in C, and a MATLAB-only identifier in the MATLAB file set
+  langSel.value = "matlab"; langSel.dispatchEvent(new w.Event("change"));
+  setAll("matlabOnlyVar = 3;\n"); // identifier that must never leak into C
+  langSel.value = "c"; langSel.dispatchEvent(new w.Event("change"));
+  const cSaved = ta.value;
+  let leakC = [];
+  for (const pre of prefixes) for (const l of labelsFor(pre)) if (["linspace","disp","plot","zeros","ones","numel","subplot","surf","meshgrid","elseif","num2str","cellfun","isempty","ode45","polyfit","matlabOnlyVar","otherwise","persistent"].includes(l)) leakC.push(pre + ":" + l);
+  ok(leakC.length === 0, "C completion offers no MATLAB items", leakC);
+  for (const pre of ["pri", "mal", "stru", "inc"]) { const l = labelsFor(pre); ok(l.length > 0, "C still completes '" + pre + "'", l.slice(0, 3)); }
+  setAll("#include <st"); setCaret(ta.value.length); w.CPlay.complete(true);
+  ok(popup().labels.indexOf("stdio.h") >= 0, "C header completion still works", popup().labels.slice(0, 3)); key("Escape");
+  setAll("struct cOnlyType { int cOnlyField; };\nint cOnlyVar;\n");
+  langSel.value = "matlab"; langSel.dispatchEvent(new w.Event("change"));
+  let leakM = [];
+  for (const pre of prefixes.concat(["#", "cO", "NU", "EO", "IN", "ty", "un", "vo", "ch"])) for (const l of labelsFor(pre)) if (["printf","scanf","malloc","free","strlen","puts","include","define","typedef","sizeof","int","size_t","NULL","EOF","INT_MAX","memcpy","fgets","putchar","unsigned","void","cOnlyType","cOnlyField","cOnlyVar","static","stdio.h","->"].includes(l)) leakM.push(pre + ":" + l);
+  ok(leakM.length === 0, "MATLAB completion offers no C items", leakM);
+  setAll("s.a = 1;\ns."); setCaret(ta.value.length); w.CPlay.complete(true);
+  ok(!popup().open || popup().kinds.indexOf("成员") < 0, "no C struct-member completion in MATLAB"); key("Escape");
+  for (const pre of ["lins", "dis", "zer", "subp"]) { const l = labelsFor(pre); ok(l.length > 0 && !/^(printf|malloc)$/.test(l[0]), "MATLAB still completes '" + pre + "'", l.slice(0, 3)); }
   langSel.value = "c"; langSel.dispatchEvent(new w.Event("change"));
 
   ok(errors.length === 0, "no script errors", errors);
