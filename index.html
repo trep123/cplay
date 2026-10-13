@@ -10743,7 +10743,7 @@ self.onmessage = function (ev) {
             add({ label: v.name, kind: "变量", detail: v.type, doc: v.type + " · <code>" + esc(v.name) + "</code>", boost: 300 });
           });
           me.funcs.forEach(function (f) { add({ label: f.name, kind: "函数", detail: f.detail, doc: "本文件中的函数 · <code>" + esc(f.detail) + "</code>", fn: true, noargs: f.noargs, boost: 300 }); });
-          for (var i = 0; i < files.length; i++) if (i !== active && /\.m$/.test(files[i].name)) {
+          for (var i = 0; i < files.length; i++) if (i !== active && ownFile(i)) {
             var fname = files[i].name.replace(/\.m$/, ""), x = cachedIndex(i), main = x.funcs[0];
             if (fname !== "main") add({ label: fname, kind: "函数", detail: main ? main.detail : fname + "(…)", doc: "函数文件 " + esc(files[i].name) + (main ? " · <code>" + esc(main.detail) + "</code>" : ""), fn: true, noargs: main ? main.noargs : false, boost: 260 });
           }
@@ -10870,14 +10870,16 @@ self.onmessage = function (ev) {
         }
         function fileCode(i) { return i === active ? ta.value : files[i].code; }
         function indexOf(i) {
-          var f = files[i], code = fileCode(i), c = idxCache[f.name];
-          if (!c || c.code !== code) { c = idxCache[f.name] = { code: code, idx: lang === "matlab" ? scanML(code) : scanFile(code) }; }
+          var f = files[i], code = fileCode(i), key = lang + ":" + f.name, c = idxCache[key];
+          if (!c || c.code !== code) { c = idxCache[key] = { code: code, idx: lang === "matlab" ? scanML(code) : scanFile(code) }; }
           return c.idx;
         }
         function scheduleScan() { clearTimeout(scanTimer); scanTimer = setTimeout(function () { scanTimer = 0; indexOf(active); }, 300); }
         // Scan now only if an edit is waiting for the debounced scan (once when the popup opens, not per keystroke).
         function flushScan() { if (scanTimer) { clearTimeout(scanTimer); scanTimer = 0; indexOf(active); } }
-        function cachedIndex(i) { var c = idxCache[files[i].name]; return c ? c.idx : indexOf(i); }
+        function cachedIndex(i) { var c = idxCache[lang + ":" + files[i].name]; return c ? c.idx : indexOf(i); }
+        // Completion never mixes languages: C reads only .c/.h tabs, MATLAB only .m tabs.
+        function ownFile(i) { return lang === "matlab" ? /\.m$/i.test(files[i].name) : /\.[ch]$/i.test(files[i].name); }
 
         /* --- context at the caret --- */
         var MEMBER_RE = /([A-Za-z_]\w*(?:\s*\[[^\]\n]*\])*(?:\s*(?:\.|->)\s*[A-Za-z_]\w*(?:\s*\[[^\]\n]*\])*)*)\s*(\.|->)\s*(\w*)$/;
@@ -10920,7 +10922,7 @@ self.onmessage = function (ev) {
         }
         function mergedIndex() {
           var all = { structs: {}, typedefs: {} };
-          for (var i = 0; i < files.length; i++) {
+          for (var i = 0; i < files.length; i++) if (ownFile(i)) {
             var x = cachedIndex(i);
             Object.keys(x.structs).forEach(function (k) { all.structs[k] = x.structs[k]; });
             Object.keys(x.typedefs).forEach(function (k) { all.typedefs[k] = x.typedefs[k]; });
@@ -10931,7 +10933,7 @@ self.onmessage = function (ev) {
           var me = cachedIndex(active), best = null;
           me.vars.forEach(function (v) { if (v.name === name && (v.pos <= caret || !best)) { if (!best || v.pos <= caret) best = v; } });
           if (best) return best.type;
-          for (var i = 0; i < files.length; i++) if (i !== active) {
+          for (var i = 0; i < files.length; i++) if (i !== active && ownFile(i)) {
             var x = cachedIndex(i);
             for (var k = 0; k < x.vars.length; k++) if (x.vars[k].global && x.vars[k].name === name) return x.vars[k].type;
           }
@@ -10968,7 +10970,7 @@ self.onmessage = function (ev) {
           me.macros.forEach(function (f) { add({ label: f.name, kind: "宏", detail: f.detail, doc: "<code>#define " + esc(f.name + f.detail) + "</code>", boost: 300 }); });
           me.types.forEach(function (t) { add({ label: t.name, kind: "类型", detail: t.detail, doc: "<code>" + esc(t.detail) + "</code>", boost: 280 }); });
           me.enums.forEach(function (t) { add({ label: t.name, kind: "宏", detail: t.detail, doc: "枚举常量 · " + esc(t.detail), boost: 280 }); });
-          for (var i = 0; i < files.length; i++) if (i !== active) {
+          for (var i = 0; i < files.length; i++) if (i !== active && ownFile(i)) {
             var x = cachedIndex(i), fn = files[i].name;
             x.funcs.forEach(function (f) { add({ label: f.name, kind: "函数", detail: f.detail, doc: fn + " · <code>" + esc(f.detail) + "</code>", fn: true, noargs: f.noargs, boost: 220 }); });
             x.macros.forEach(function (f) { add({ label: f.name, kind: "宏", detail: f.detail, doc: fn + " · <code>#define " + esc(f.name + f.detail) + "</code>", boost: 220 }); });
@@ -11113,7 +11115,9 @@ self.onmessage = function (ev) {
           // A fully typed MATLAB keyword (end, else, …): Enter should start a new line, not pick "elseif" / "legend".
           if (lang === "matlab" && ctx.mode === "word" && !explicit && ML_KWS.indexOf(ctx.prefix) >= 0) return acClose();
           if (!ac.open || ctx.mode === "member") flushScan();
-          var src = ctx.mode === "member" ? memberItems(ctx) : ctx.mode === "word" ? (lang === "matlab" ? mlWordItems(ctx) : wordItems(ctx)) : headerItems(ctx);
+          var src;
+          if (lang === "matlab") src = ctx.mode === "word" ? mlWordItems(ctx) : []; // MATLAB: only MATLAB items, never C headers/members
+          else src = ctx.mode === "member" ? memberItems(ctx) : ctx.mode === "word" ? wordItems(ctx) : headerItems(ctx);
           var items = rank(src, ctx.prefix);
           if (!items.length) return acClose();
           acBuild();
