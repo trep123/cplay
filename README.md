@@ -1,6 +1,6 @@
-# CPlay · C 语言在线运行平台
+# CPlay · C / MATLAB 在线运行平台
 
-纯前端、零服务器的 C 语言在线运行环境。打开网页就能写 C、运行 C。
+纯前端、零服务器的 C 语言和 MATLAB 在线运行环境。打开网页就能写 C、写 MATLAB，并直接运行、画图。顶部的「语言」下拉框在 C 和 MATLAB 之间切换（也可以用链接 `#c` / `#matlab` 直接打开对应模式）。
 
 在线地址：https://c.0x-z.cn
 
@@ -32,6 +32,12 @@
 | `cinterp.js` | C 解释器：预处理 → 词法 → 语法分析 → 闭包编译 → 执行 |
 | `src/worker-snippet.js` | Web Worker 胶水代码 |
 | `src/examples.json` | 内置示例（由 `src/examples.py` 生成） |
+| `mlinterp.js` | MATLAB 解释器（全局 `MLInterp`，可在 Web Worker 中运行）；源码在 `src/mlinterp/`，`sh src/mlinterp/build.sh` 重新拼接 |
+| `mlplot.js` | MATLAB 图形渲染器（全局 `MLPlot`，canvas 绘制，主线程使用） |
+| `src/ml-worker-glue.js` | MATLAB Web Worker 胶水代码 |
+| `src/mlinterp/examples/` | MATLAB 示例源文件（`node src/mlinterp/examples/build.js` 生成 `src/mlinterp/examples.json`） |
+| `tests/matlab/` | MATLAB 解释器测试：`node tests/matlab/tests.js`（255 个用例）、`node tests/matlab/run_examples.js`、`node tests/matlab/bench.js` |
+| `tests/page-jsdom.js` | 页面测试（jsdom，C 与 MATLAB 两种模式共 116 项）：`node tests/page-jsdom.js` |
 | `tests/` | Node 测试：`node tests/tests.js`（90 个用例）、`node tests/run_examples.js`、`node tests/perf.js` |
 
 ## 解释器 API
@@ -77,6 +83,25 @@ const r = CInterp.run(source, stdinText, {
 - 不检查用 `goto` 跳过变长数组声明进入其作用域这类违规写法；`switch` 语句体中直接声明的变长数组要到函数返回时才释放。
 - 函数内部 `typedef` 的变长数组类型在每次使用时重新计算大小（标准规定在 `typedef` 处计算一次）。
 - 同名的非 `static` 全局变量在多个文件中重复定义不会报链接错误（按同一个变量处理）。
+
+## MATLAB 模式
+
+在顶部「语言」下拉框中选择 MATLAB（或打开 `…/#matlab`）。两种语言各有一套独立的文件标签页、示例和输入，切换时互不影响，切回来时原样保留；所选语言会记在 localStorage 里。
+
+- **文件**：`main.m` 是主脚本；「+ 新建文件」默认创建 `.m` 函数文件（文件名就是函数名，例如 `area2.m` 中的 `function y = area2(x)`），主脚本里可以直接调用。
+- **编辑器**：MATLAB 语法高亮（关键字、`%` 注释和 `%{ … %}` 块注释、`'…'` / `"…"` 字符串——标识符或 `)` `]` `'` 后面的 `'` 识别为转置、数字、常用内置函数）；在 `for` / `if` / `while` / `function` / `switch` / `try` / `else` / `elseif` / `case` 行后回车自动缩进，输入 `end` / `else` / `catch` / `case` / `otherwise` 时自动对齐到所属代码块（尽力而为）。
+- **代码补全**：约 190 个常用函数（`zeros`、`linspace`、`plot`、`subplot`、`surf`、`meshgrid`、`sprintf`、`cellfun`、`ode45`、`polyfit` …）带签名和中文说明；当前文件中赋值过的变量（含 `[a, b] = …`、`for k = …`、函数参数）、本文件中的函数和其他 `.m` 文件中的函数；代码片段 `for`、`if`、`ifelse`、`while`、`function`、`switch`、`try`、`plot`（带 title / xlabel / ylabel / grid on 的绘图模板）。
+- **运行**：MATLAB 解释器在单独的 Web Worker 中运行（第一次运行时才启动），10 秒超时，随时可以「停止」。「输入」面板的内容按行提供给 `input()`。
+- **图形**：`plot`、`subplot`、`surf` 等生成的图窗以「Figure N」卡片显示，可下载 PNG，图形配色跟随浅色 / 深色主题；每次运行前清空，`close` 会关闭对应卡片。电脑上图形区在右侧输出面板下方；手机上显示在「输出」页的文本下方（运行出图后自动停在「输出」页）。
+- **报错**：状态栏显示「运行错误 / 语法错误 · 第 N 行」（在函数文件中时显示「stats.m 第 N 行」），点击跳到对应文件和行。
+- **支持**：矩阵与数组运算、逻辑索引、`end` 索引、字符串与 `string`、元胞数组、结构体、`containers.Map`、函数文件与局部函数、匿名函数和函数句柄、`try/catch`、`global` / `persistent`、`fprintf` / `sprintf` / `disp` 与 MATLAB 风格的变量显示、常用线性代数（`inv`、`det`、`eig`、`lu`、`qr`、`\`）、`polyfit` / `polyval`、`interp1`、`trapz`、`ode45`、`fzero`、`integral`，以及 `plot` / `subplot` / `bar` / `pie` / `histogram` / `scatter` / `surf` / `mesh` / `contour` 等绘图。12 个内置示例。
+
+### MATLAB 暂不支持
+
+- `classdef`（面向对象的类定义）。
+- 复数矩阵的线性代数支持有限（复数标量和逐元素运算可用）。
+- 宽矩阵显示时不会像 MATLAB 那样按「Columns 1 through 8」分段。
+- 各种工具箱（Signal、Optimization、Symbolic 等）、文件读写、GUI 和 Simulink。
 
 ## 本地运行
 
