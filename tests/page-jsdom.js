@@ -210,6 +210,32 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   $("clear").click();
   ok($("out").textContent === "", "clear empties the output");
 
+  console.log("C interactive input");
+  ok(w.getComputedStyle($("inpanel")).display === "none", "C mode hides the stdin panel");
+  setAll('#include <stdio.h>\nint main(void) {\n    int a, b, x, t = 0;\n    printf("a = ");\n    scanf("%d", &a);\n    printf("b = ");\n    scanf("%d", &b);\n    printf("sum=%d\\n", a + b);\n    while (scanf("%d", &x) == 1) t += x;\n    printf("t=%d\\n", t);\n    return 0;\n}\n');
+  const ask = async (v, eof) => {
+    await sleep(200);
+    const inp = w.document.querySelector(".x-ask__in");
+    if (!inp) return false;
+    inp.value = v;
+    inp.dispatchEvent(new w.KeyboardEvent("keydown", { key: eof ? "d" : "Enter", ctrlKey: !!eof, bubbles: true }));
+    return true;
+  };
+  $("run").click();
+  await sleep(200);
+  ok(!!w.document.querySelector("#out .x-ask__in") && $("out").textContent.startsWith("a = "), "input box appears inline after the prompt", $("out").textContent);
+  ok(/等待输入/.test($("status").textContent), "status says waiting for input", $("status").textContent);
+  await ask("3"); await ask("4"); await ask("5 6"); await ask("", true);
+  await sleep(250);
+  outText = $("out").textContent;
+  ok(outText === "a = 3\nb = 4\nsum=7\n5 6\n^D\nt=11\n", "replayed output is not duplicated and EOF ends the loop", outText);
+  ok(/返回值 0/.test($("status").textContent) && !w.document.querySelector(".x-ask"), "program finishes and the input box is gone", $("status").textContent);
+  setAll('#include <stdio.h>\nint main(void) {\n    int n;\n    scanf("%d", &n);\n    return 0;\n}\n');
+  $("run").click();
+  await sleep(200);
+  $("stop").click();
+  ok(!w.document.querySelector(".x-ask") && /已停止/.test($("status").textContent), "stop cancels a pending input");
+
   console.log("phone view switch");
   w.CPlay.setView("output");
   ok(d.querySelector(".x-app").getAttribute("data-view") === "output" && d.querySelector('#seg [data-v="output"]').getAttribute("aria-selected") === "true", "segmented switch state");
