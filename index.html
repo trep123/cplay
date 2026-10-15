@@ -170,13 +170,27 @@
       .x-out:empty::before { content: "点击「运行」后，程序输出会显示在这里。"; color: var(--x-muted); font-family: var(--sans); font-size: 14px; }
       .x-out .e { color: var(--x-err); }
       .x-out .i { color: var(--x-muted); }
-      /* C：交互式输入——程序读取 stdin 时，输入框直接出现在输出末尾 */
+      /* C：运行窗口——运行时弹出，输出（结果）面板移入窗口；程序读取 stdin 时弹出与原来一样的「输入」面板 */
       .x-out .in { color: var(--x-accent); }
-      .x-ask { display: inline-flex; align-items: baseline; gap: 6px; max-width: 100%; vertical-align: baseline; }
-      .x-ask__in { min-width: 6ch; width: 12ch; max-width: calc(100% - 9em); padding: 1px 4px; border: 0; border-bottom: 1.5px solid var(--x-accent); border-radius: 0; outline: none; background: transparent; color: var(--x-accent); font: inherit; caret-color: var(--x-accent); }
-      .x-ask__in:focus { background: var(--x-sel); }
-      .x-ask__btn { padding: 0 7px; border: 1px solid var(--x-faint); border-radius: 6px; background: transparent; color: var(--x-muted); font: 12px/1.6 var(--sans); cursor: pointer; }
-      .x-ask__btn:hover { color: var(--x-text); border-color: var(--x-muted); }
+      .x-dlg { position: fixed; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center; padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); background: rgb(0 0 0 / 0.4); animation: x-dlg-in 0.16s ease-out; }
+      .x-dlg[hidden] { display: none; }
+      .x-dlg__card { width: min(860px, 100%); height: min(680px, 100%); display: flex; flex-direction: column; gap: 10px; padding: 8px 12px 12px; background: var(--fill-primary-on); color: var(--text-primary); border: 1px solid var(--stroke-primary); border-radius: var(--r-l); box-shadow: 0 24px 64px rgb(0 0 0 / 0.32); animation: x-dlg-pop 0.18s var(--ease-out, ease-out); }
+      .x-dlg__head { display: flex; align-items: center; gap: 8px; min-height: 40px; padding-left: 4px; }
+      .x-dlg__title { margin-right: auto; font: var(--type-label); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+      .x-dlg__body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+      .x-dlg__body > .x-askpanel { flex: 0 0 auto; height: 30%; min-height: 120px; }
+      .x-dlg__body > .x-outpanel { flex: 1 1 0; visibility: visible !important; pointer-events: auto !important; }
+      .x-askpanel[hidden] { display: none; }
+      .x-askpanel.is-busy .x-stdin { opacity: 0.5; }
+      .x-panel__acts { display: flex; align-items: center; gap: 2px; flex: none; }
+      @keyframes x-dlg-in { from { opacity: 0; } }
+      @keyframes x-dlg-pop { from { opacity: 0; transform: translateY(8px) scale(0.98); } }
+      @media (prefers-reduced-motion: reduce) { .x-dlg, .x-dlg__card { animation: none; } }
+      @media (max-width: 719px) {
+        .x-dlg { padding: 0; align-items: stretch; }
+        .x-dlg__card { width: 100%; height: var(--vvh, 100dvh); border: 0; border-radius: 0; padding: max(8px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom)); }
+        .x-dlg__head .x-btn { min-height: var(--tap); }
+      }
       .x-status.is-wait::before { background: var(--x-accent); box-shadow: none; opacity: 1; animation: x-blink 1.1s steps(2, start) infinite; }
       @keyframes x-blink { to { visibility: hidden; } }
       /* C 模式不再常驻「输入」面板：输出占满右侧 */
@@ -411,6 +425,22 @@
           </section>
         </div>
       </main>
+
+      <div class="x-dlg" id="rundlg" hidden>
+        <div class="x-dlg__card" role="dialog" aria-modal="true" aria-labelledby="rundlgt">
+          <div class="x-dlg__head">
+            <span class="x-dlg__title" id="rundlgt">运行窗口</span>
+            <button class="x-btn x-btn--danger" id="dlgstop" type="button" disabled>■ 停止</button>
+            <button class="x-btn" id="dlgclose" type="button" title="关闭运行窗口（Esc）">关闭</button>
+          </div>
+          <div class="x-dlg__body" id="rundlgbody">
+            <section class="x-panel x-askpanel" id="askpanel" aria-label="标准输入" hidden>
+              <div class="x-panel__head"><label class="x-panel__title" for="askin">输入 <small>stdin · scanf / getchar 从这里读取</small></label><span class="x-panel__acts"><button class="x-btn x-btn--ghost" id="askeof" type="button" title="结束输入：scanf / getchar 读到 EOF（Ctrl+D）">EOF</button><button class="x-btn x-btn--ghost" id="asksend" type="button" title="把输入发给程序（回车）">发送 ↵</button></span></div>
+              <textarea class="x-stdin x-mono" id="askin" spellcheck="false" autocapitalize="off" autocorrect="off" autocomplete="off" enterkeyhint="send" placeholder="程序正在等待输入：输入后按回车发送（Shift+回车换行，Ctrl+D 结束输入）"></textarea>
+            </section>
+          </div>
+        </div>
+      </div>
 
       <footer class="x-foot"><span class="x-only-ml">全部在你的浏览器本地运行 · 支持 MATLAB 常用语法（矩阵、元胞、结构体、函数文件、匿名函数、plot / subplot / surf、ode45、polyfit 等） · 可新建 .m 函数文件 · Ctrl + 空格 代码补全</span><span class="x-only-c">全部在你的浏览器本地运行 · 支持 C99 常用子集（指针、结构体、malloc、printf/scanf、string.h、math.h、goto、变长数组、位域等） · 可新建 .h / .c 文件组成多文件程序 · Ctrl + 空格 代码补全</span></footer>
     </div>
@@ -9367,7 +9397,7 @@ self.onmessage = function (ev) {
   };
 })(typeof window !== 'undefined' ? window : this);
 </script>
-    <script src="cinterp.js?v=20261015"></script>
+    <script src="cinterp.js?v=20261015b"></script>
     <script>
       // Fallback: if cinterp.js was not loaded as a script, evaluate the copy inside #worker-src.
       if (!window.CInterp) {
@@ -10158,7 +10188,7 @@ self.onmessage = function (ev) {
               b.type = "button"; b.className = "x-linelink";
               b.textContent = where;
               b.title = "跳到" + where;
-              b.addEventListener("click", function () { var k = findFile(efile); if (k >= 0) switchTo(k); goToLine(line); });
+              b.addEventListener("click", function () { closeDlg(); var k = findFile(efile); if (k >= 0) switchTo(k); goToLine(line); });
               parts.push(" · ", b, "：");
               errAt = { file: efile, line: line };
               errLine = files[active].name === efile && line <= lineCount ? line : 0; renderGutter();
@@ -10178,6 +10208,7 @@ self.onmessage = function (ev) {
         function setRunning(on) {
           running = on;
           stopBtn.disabled = !on;
+          $("dlgstop").disabled = !on;
           app.classList.toggle("is-running", on);
           if (on) setStatus("run", ["运行中…"]);
         }
@@ -10226,6 +10257,7 @@ self.onmessage = function (ev) {
           job.done = function (exitCode, error, needInput, ms) {
             killWorker();
             if (needInput && !error) { cShown = job.seen; showAsk(); return; }
+            askPanel.hidden = true;
             setRunning(false);
             showResult(exitCode, error, ms);
           };
@@ -10256,55 +10288,73 @@ self.onmessage = function (ev) {
           };
           w.postMessage({ source: job.src, stdin: job.input, files: job.extra, interactive: interactive });
         }
+        /* 运行窗口：输出面板临时移入弹窗，关闭时放回原位 */
+        var dlg = $("rundlg"), dlgBody = $("rundlgbody"), askPanel = $("askpanel"), askIn = $("askin");
+        var outPanel = $("outpanel"), outHome = outPanel.parentNode, outNext = outPanel.nextSibling, dlgFocus = null;
+        function openDlg() {
+          $("rundlgt").textContent = "运行 · " + files[0].name;
+          if (!dlg.hidden) return;
+          dlgFocus = document.activeElement;
+          dlgBody.appendChild(outPanel);
+          dlg.hidden = false;
+          app.classList.add("has-dlg");
+          try { $("dlgclose").focus({ preventScroll: true }); } catch (e) {}
+        }
+        function closeDlg() {
+          if (dlg.hidden) return;
+          if (running) stop();
+          hideAsk(); askPanel.hidden = true;
+          outHome.insertBefore(outPanel, outNext);
+          dlg.hidden = true;
+          app.classList.remove("has-dlg");
+          out.scrollTop = out.scrollHeight;
+          if (dlgFocus && dlgFocus.focus) { try { dlgFocus.focus({ preventScroll: true }); } catch (e) {} }
+          dlgFocus = null;
+        }
         function showAsk() {
           if (raf) { cancelAnimationFrame(raf); flush(); }
-          hideAsk();
-          var box = document.createElement("span"), inp = document.createElement("input");
-          box.className = "x-ask";
-          inp.className = "x-ask__in x-mono"; inp.type = "text";
-          inp.spellcheck = false; inp.autocapitalize = "off"; inp.setAttribute("autocorrect", "off"); inp.autocomplete = "off";
-          inp.setAttribute("enterkeyhint", "send");
-          inp.setAttribute("aria-label", "程序正在等待输入（回车发送，Ctrl+D 结束输入）");
-          var send = document.createElement("button"), eof = document.createElement("button");
-          send.type = eof.type = "button"; send.className = eof.className = "x-ask__btn";
-          send.textContent = "发送 ↵"; eof.textContent = "EOF";
-          send.title = "把这一行发给程序（回车）"; eof.title = "结束输入，scanf / getchar 读到 EOF（Ctrl+D）";
-          function grow() { inp.style.width = Math.max(12, inp.value.length + 2) + "ch"; }
-          inp.addEventListener("input", grow);
-          inp.addEventListener("keydown", function (e) {
-            if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); submitAsk(inp.value, false); }
-            else if ((e.ctrlKey || e.metaKey) && (e.key === "d" || e.key === "D" || e.key === "z" || e.key === "Z")) { e.preventDefault(); submitAsk(inp.value, true); }
-          });
-          send.addEventListener("click", function () { submitAsk(inp.value, false); });
-          eof.addEventListener("click", function () { submitAsk(inp.value, true); });
-          box.appendChild(inp); box.appendChild(send); box.appendChild(eof);
-          out.appendChild(box);
-          cAsk = box;
+          openDlg();
+          askPanel.hidden = false;
+          askPanel.classList.remove("is-busy");
+          askIn.disabled = false;
+          cAsk = true;
           out.scrollTop = out.scrollHeight;
           var hint = document.createElement("span"); hint.className = "x-dim"; hint.textContent = "· 回车发送，Ctrl+D 结束输入";
           setStatus("wait", ["等待输入 ", hint]);
-          if (isPhone() && view !== "output") setView("output");
-          try { inp.focus({ preventScroll: true }); } catch (e) { inp.focus(); }
+          try { askIn.focus({ preventScroll: true }); } catch (e) { askIn.focus(); }
         }
         function hideAsk() {
-          if (cAsk && cAsk.parentNode) cAsk.parentNode.removeChild(cAsk);
           cAsk = null;
+          askIn.disabled = true;
+          askPanel.classList.add("is-busy");
         }
-        function submitAsk(text, isEof) {
+        function submitAsk(isEof) {
           if (!cAsk) return;
+          var text = String(askIn.value || "").replace(/\r\n?/g, "\n");
+          askIn.value = "";
           hideAsk();
-          text = String(text || "").replace(/\r?\n/g, " ");
           if (isEof) { if (text) { cIn += text; print(text, "in"); } print("^D\n", "i"); }
           else { cIn += text + "\n"; print(text + "\n", "in"); }
           startC(!isEof);
         }
+        askIn.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); e.stopPropagation(); submitAsk(false); }
+          else if ((e.ctrlKey || e.metaKey) && (e.key === "d" || e.key === "D" || e.key === "z" || e.key === "Z")) { e.preventDefault(); submitAsk(true); }
+        });
+        $("asksend").addEventListener("click", function () { submitAsk(false); });
+        $("askeof").addEventListener("click", function () { submitAsk(true); });
+        $("dlgclose").addEventListener("click", closeDlg);
+        $("dlgstop").addEventListener("click", function () { stop(); });
+        dlg.addEventListener("keydown", function (e) { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeDlg(); } });
         function run() {
           if (lang === "matlab") { runML(); return; }
           acClose();
           saveActive();
           hideAsk();
+          askPanel.hidden = true; askIn.value = "";
           cIn = ""; cShown = 0;
           clearOut();
+          openDlg();
           clearErr();
           if (isPhone()) setView("output");
           startC(true);
@@ -10469,7 +10519,7 @@ self.onmessage = function (ev) {
           if (!running) return;
           runToken++;
           killWorker();
-          hideAsk();
+          hideAsk(); askPanel.hidden = true;
           setRunning(false);
           print((out.textContent || pending.length ? "\n" : "") + "已停止\n", "e");
           setStatus("", ["已停止"]);
@@ -11285,9 +11335,8 @@ self.onmessage = function (ev) {
         $("addfile").addEventListener("click", addFile);
         stopBtn.addEventListener("click", stop);
         $("clear").addEventListener("click", function () {
-          var ask = cAsk;
           clearOut();
-          if (ask) { out.appendChild(ask); var i = ask.querySelector("input"); if (i) i.focus(); }
+          if (cAsk) askIn.focus();
         });
         $("download").addEventListener("click", function () {
           setMenu(false);
@@ -11363,6 +11412,7 @@ self.onmessage = function (ev) {
         function setLang(l) {
           l = l === "matlab" ? "matlab" : "c";
           if (started && l === lang) return;
+          closeDlg();
           if (started) {
             if (running) stop();
             saveActive();
