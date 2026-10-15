@@ -5,6 +5,8 @@
 // ---------------- errors ----------------
 class CErr extends Error { constructor(kind, line, msg) { super(msg); this.kind = kind; this.line = line; this.cmsg = msg; } }
 class ExitSig { constructor(code) { this.code = code; } }
+// 交互模式：stdin 读完时抛出，宿主收集一行新输入后从头重跑（已显示的输出由宿主跳过）
+class NeedInput {}
 let cLine = 0;
 function cerr(msg, line) { throw new CErr('compile', line != null ? line : cLine, msg); }
 
@@ -846,7 +848,11 @@ function run(source, stdinText, opts) {
   function vaNew(st) { const h = vaFree.length ? vaFree.pop() : vaTab.length; vaTab[h] = st; return h; }
   function stPtr(a, v) { chk(a, 8); dv.setUint32(a, v, true); dv.setUint32(a + 4, 0, true); }
   const inb = ENC.encode(stdinText || ''); let ip = 0;
-  const stdinSrc = { peek: () => ip < inb.length ? inb[ip] : -1, get: () => ip < inb.length ? inb[ip++] : -1 };
+  const wantMore = !!opts.interactive; let needInput = false;
+  const stdinSrc = {
+    peek: () => ip < inb.length ? inb[ip] : wantMore ? (() => { throw new NeedInput(); })() : -1,
+    get: () => ip < inb.length ? inb[ip++] : wantMore ? (() => { throw new NeedInput(); })() : -1,
+  };
 
   function rerr(m) { throw new CErr('runtime', line, m); }
   function tmo() { rerr('执行超时：可能存在死循环'); }
@@ -1975,15 +1981,16 @@ function run(source, stdinText, opts) {
   } catch (err) {
     const mk = (kind, ln, message) => { ln = ln || 0; const e = { kind, line: ln % LB, message }; const fi = Math.floor(ln / LB); if (fi > 0 && fileNames[fi]) e.file = fileNames[fi]; return e; };
     if (err instanceof ExitSig) exitCode = err.code;
+    else if (err instanceof NeedInput) { needInput = true; exitCode = null; }
     else if (err instanceof CErr) { error = mk(err.kind, err.line, err.cmsg); exitCode = err.kind === 'runtime' ? 139 : 1; }
     else if (err instanceof RangeError && /call stack/i.test(err.message)) { error = mk('runtime', line, '栈溢出：递归太深'); exitCode = 139; }
     else { error = mk('internal', line || cLine, '解释器内部错误：' + (err && err.message)); exitCode = 1; }
   }
   try { flush(true); } catch (e2) { /* ignore */ }
-  return { exitCode, error };
+  return needInput ? { exitCode, error, needInput: true } : { exitCode, error };
 }
 
-const CInterp = { run, version: '1.1' };
+const CInterp = { run, version: '1.2' };
 root.CInterp = CInterp;
 if (typeof module !== 'undefined' && module.exports) module.exports = CInterp;
 })(typeof self !== 'undefined' ? self : typeof globalThis !== 'undefined' ? globalThis : this);
