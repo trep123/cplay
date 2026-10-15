@@ -22,7 +22,8 @@
 - **常用标准库**：`printf/sprintf/snprintf`（完整格式化）、`fprintf(stderr, …)`（错误输出在控制台中显示为红色）、`scanf/sscanf/getchar/fgets`、`malloc/calloc/realloc/free`、`qsort/bsearch`、`strtok/strtol/strtoul/strtod`、`string.h`（含 `strstr/strncpy/memmove/strspn` 等）、`math.h`、`ctype.h`、`stdarg.h`（`va_list/va_arg/vprintf`）、`assert.h`（中文提示 + 行号）、`stdbool.h`、`stdint.h`、`inttypes.h`（`PRId64` 等）、`limits.h`、`float.h`、`time/clock`、`exit/atexit`。
 - **正确的整数语义**：32 位 int 溢出回绕、无符号运算、char 有符号、`long long` 用 BigInt 保证 64 位精度。
 - **中文报错 + 行号**：编译错误和运行时错误（除以零、空指针、越界、重复 free、栈溢出、超时）都会指出具体行，点击即可跳转。
-- 14 个内置示例（含 goto 清理、位域、变长数组矩阵、多文件模块），支持导入 / 下载文件，支持标准输入。
+- 14 个内置示例（含 goto 清理、位域、变长数组矩阵、多文件模块），支持导入 / 下载文件。
+- **交互式输入（C）**：不再常驻「输入」面板。程序执行到 `scanf` / `getchar` / `fgets` 等读取函数时，输入框直接出现在输出末尾（紧跟提示文字），回车发送一行，程序接着往下运行并显示结果；`Ctrl+D` 或「EOF」按钮表示输入结束（用于 `while (scanf(...) == 1)` 这类读到 EOF 的循环）。实现方式：解释器在 stdin 读完时返回 `needInput`，页面收集一行后带着全部已输入内容从头重跑，并跳过已经显示过的输出，因此依赖 `time()` / 随机种子的程序在多次输入间可能出现输出不一致。
 
 ## 目录
 
@@ -48,8 +49,9 @@ const r = CInterp.run(source, stdinText, {
   onStderr: s => console.error(s),   // 可选；不传时 stderr 也写到 onStdout
   files: { 'util.h': '...', 'util.c': '...' },  // 可选：多文件
   maxSteps: 5e8,
+  interactive: false,   // 可选：true 时 stdin 读完不返回 EOF，而是结束运行并返回 needInput: true
 });
-// r = { exitCode, error: null | { kind: 'compile' | 'runtime', line, message, file? } }
+// r = { exitCode, error: null | { kind: 'compile' | 'runtime', line, message, file? }, needInput? }
 // 错误发生在 files 中的某个文件里时，error.file 是该文件名，line 是该文件内的行号。
 ```
 
