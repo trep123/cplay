@@ -8,9 +8,10 @@ self.onmessage = function (ev) {
   var r = self.CInterp.run(String(data.source || ''), String(data.stdin || ''), {
     maxSteps: data.maxSteps || 2e9,
     files: data.files || null,
+    interactive: !!data.interactive,
     onStdout: function (s) { buf += s; if (now() - last > 16 || buf.length > 65536) send(); },
     onStderr: function (s) { send(); self.postMessage({ type: 'err', text: s }); }
   });
   send();
-  self.postMessage({ type: 'done', exitCode: r.exitCode, error: r.error, ms: Math.round(now() - t0) });
+  self.postMessage({ type: 'done', exitCode: r.exitCode, error: r.error, needInput: !!r.needInput, ms: Math.round(now() - t0) });
 };
