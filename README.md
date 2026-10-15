@@ -39,7 +39,7 @@
 | `src/mlinterp/examples/` | MATLAB 示例源文件（`node src/mlinterp/examples/build.js` 生成 `src/mlinterp/examples.json`） |
 | `tests/matlab/` | MATLAB 解释器测试：`node tests/matlab/tests.js`（255 个用例）、`node tests/matlab/run_examples.js`、`node tests/matlab/bench.js` |
 | `tests/page-jsdom.js` | 页面测试（jsdom，C 与 MATLAB 两种模式共 116 项）：`node tests/page-jsdom.js` |
-| `tests/` | Node 测试：`node tests/tests.js`（90 个用例）、`node tests/run_examples.js`、`node tests/perf.js` |
+| `tests/` | Node 测试：`node tests/tests.js`（90 个用例）、`node tests/page-jsdom.js`（页面 + 交互式输入）、`node tests/run_examples.js`、`node tests/perf.js` |
 
 ## 解释器 API
 
